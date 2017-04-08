@@ -1,0 +1,98 @@
+
+void () TeamFortress_CTF_FlagInfo =
+{
+	local entity te;
+
+	te = Finditem (TF_FLARE_OFF);
+	if ((te.goal_state == TF_FLARE_OFF))
+	{
+		if ((self == te.owner))
+		{
+			sprint (self, BOT_FIGHTING, "You have the enemy flag. ");
+		}
+		else
+		{
+			sprint (self, BOT_FIGHTING, te.owner.netname);
+			sprint (self, BOT_FIGHTING, " has");
+			if ((self.team_no == TF_FLARE_OFF))
+			{
+				sprint (self, BOT_FIGHTING, " your flag. ");
+			}
+			else
+			{
+				sprint (self, BOT_FIGHTING, " the enemy flag. ");
+			}
+		}
+	}
+	else
+	{
+		if ((te.origin != te.oldorigin))
+		{
+			if ((self.team_no == TF_FLARE_OFF))
+			{
+				sprint (self, BOT_FIGHTING, "Your flag is lying about. ");
+			}
+			else
+			{
+				sprint (self, BOT_FIGHTING, "The enemy flag is lying about. ");
+			}
+		}
+		else
+		{
+			if ((self.team_no == TF_FLARE_OFF))
+			{
+				sprint (self, BOT_FIGHTING, "Your flag is in your base. ");
+			}
+			else
+			{
+				sprint (self, BOT_FIGHTING, "The enemy flag is in their base. ");
+			}
+		}
+	}
+	te = Finditem (BOT_FIGHTING);
+	if ((te.goal_state == TF_FLARE_OFF))
+	{
+		if ((self == te.owner))
+		{
+			sprint (self, BOT_FIGHTING, "You have the enemy flag.\n");
+		}
+		else
+		{
+			sprint (self, BOT_FIGHTING, te.owner.netname);
+			sprint (self, BOT_FIGHTING, " has");
+			if ((self.team_no == BOT_FIGHTING))
+			{
+				sprint (self, BOT_FIGHTING, " your flag.\n");
+			}
+			else
+			{
+				sprint (self, BOT_FIGHTING, " the enemy flag.\n");
+			}
+		}
+	}
+	else
+	{
+		if ((te.origin != te.oldorigin))
+		{
+			if ((self.team_no == BOT_FIGHTING))
+			{
+				sprint (self, BOT_FIGHTING, "Your flag is lying about.\n");
+			}
+			else
+			{
+				sprint (self, BOT_FIGHTING, "The enemy flag is lying about.\n");
+			}
+		}
+		else
+		{
+			if ((self.team_no == BOT_FIGHTING))
+			{
+				sprint (self, BOT_FIGHTING, "Your flag is in your base.\n");
+			}
+			else
+			{
+				sprint (self, BOT_FIGHTING, "The enemy flag is in their base.\n");
+			}
+		}
+	}
+};

@@ -1,0 +1,81 @@
+
+void () FlareGrenadeTouch =
+{
+	sound (self, TF_FLARE_OFF, "weapons/bounce.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+	if ((self.velocity == '0 0 0'))
+	{
+		self.avelocity = '0 0 0';
+		self.touch = SUB_Null;
+	}
+};
+
+void () FlareGrenadeThink =
+{
+	local float rnum;
+	local float time_left;
+
+	time_left = (self.health - time);
+	if ((time_left > 33))
+	{
+		rnum = random ();
+		if ((rnum < 0.5))
+		{
+			self.effects = BOT_DEFEND;
+		}
+		else
+		{
+			self.effects = TF_FLARE_LIT;
+		}
+		self.nextthink = ((time + 0.05) + (random () * 0.1));
+	}
+	else
+	{
+		if ((time_left > 31))
+		{
+			rnum = random ();
+			if ((rnum < 0.5))
+			{
+				self.effects = BOT_MOVING;
+			}
+			else
+			{
+				self.effects = BOT_DEFEND;
+			}
+			self.nextthink = ((time + 0.05) + (random () * 0.1));
+		}
+		else
+		{
+			if ((time_left > 15))
+			{
+				self.effects = BOT_MOVING;
+				self.nextthink = (time + BOT_AI_SCOUT);
+			}
+			else
+			{
+				if ((time_left < TF_FLARE_OFF))
+				{
+					remove (self);
+				}
+				else
+				{
+					self.effects = BOT_DEFEND;
+					self.nextthink = (time + time_left);
+				}
+			}
+		}
+	}
+};
+
+void () FlareGrenadeExplode =
+{
+	self.skin = TF_FLARE_OFF;
+	self.health = (time + 40);
+	self.nextthink = ((time + 0.05) + (random () * 0.1));
+	self.think = FlareGrenadeThink;
+};
+
+void () RemoveFlare =
+{
+	self.owner.effects = (self.owner.effects - (self.owner.effects & BOT_MOVING));
+	dremove (self);
+};

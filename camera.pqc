@@ -1,0 +1,411 @@
+
+void () CamLock =
+{
+	local entity te;
+
+	if ((self.enemy == world))
+	{
+		te = find (world, netname, self.netname);
+		while (te)
+		{
+			if ((te != self))
+			{
+				sprint3 (self, BOT_FIGHTING, "Locked onto ", te.netname, "\n");
+				self.enemy = te;
+				self.heat = vlen ((self.enemy.origin - self.origin));
+			}
+			te = find (te, netname, self.netname);
+		}
+		if ((self.enemy == world))
+		{
+			sprint2 (self, BOT_FIGHTING, te.netname, " not found.\n");
+		}
+	}
+	else
+	{
+		sprint (self, BOT_FIGHTING, "Removed Lock\n");
+		self.enemy = world;
+	}
+};
+
+void () CamDistLock =
+{
+	if ((self.tfstate & 4096))
+	{
+		sprint (self, BOT_FIGHTING, "Distance Lock OFF.\n");
+		self.tfstate = (self.tfstate - (self.tfstate & 4096));
+	}
+	else
+	{
+		sprint (self, BOT_FIGHTING, "Distance Lock ON.\n");
+		self.tfstate = (self.tfstate | 4096);
+		if (self.enemy)
+		{
+			self.camdist = vlen ((self.enemy.origin - self.origin));
+		}
+	}
+};
+
+void () CamVecLock =
+{
+	if ((self.tfstate & FL_WATERJUMP))
+	{
+		sprint (self, BOT_FIGHTING, "Vector Lock OFF.\n");
+		self.tfstate = (self.tfstate - (self.tfstate & FL_WATERJUMP));
+	}
+	else
+	{
+		if ((self.tfstate & 32768))
+		{
+			sprint (self, BOT_FIGHTING, "Angle Lock OFF.\n");
+			self.tfstate = (self.tfstate - (self.tfstate & 32768));
+		}
+		if (!(self.tfstate & 4096))
+		{
+			sprint (self, BOT_FIGHTING, "Vector And Distance Lock ON.\n");
+			self.tfstate = (self.tfstate | 4096);
+			if (self.enemy)
+			{
+				self.camdist = vlen ((self.enemy.origin - self.origin));
+			}
+		}
+		else
+		{
+			sprint (self, BOT_FIGHTING, "Vector Lock ON.\n");
+		}
+		self.tfstate = (self.tfstate | FL_WATERJUMP);
+		if (self.enemy)
+		{
+			self.camangle = (self.origin - self.enemy.origin);
+			self.camangle_z = (TF_FLARE_LIT - self.camangle_z);
+			self.camangle = vectoangles (self.camangle);
+		}
+	}
+};
+
+void () CamAngleLock =
+{
+	local vector enemyang;
+
+	if ((self.tfstate & 32768))
+	{
+		sprint (self, BOT_FIGHTING, "Angle Lock OFF.\n");
+		self.tfstate = (self.tfstate - (self.tfstate & 32768));
+	}
+	else
+	{
+		if ((self.tfstate & FL_WATERJUMP))
+		{
+			sprint (self, BOT_FIGHTING, "Vector Lock OFF.\n");
+			self.tfstate = (self.tfstate - (self.tfstate & FL_WATERJUMP));
+		}
+		if (!(self.tfstate & 4096))
+		{
+			sprint (self, BOT_FIGHTING, "Angle And Distance Lock ON.\n");
+			self.tfstate = (self.tfstate | 4096);
+			if (self.enemy)
+			{
+				self.camdist = vlen ((self.enemy.origin - self.origin));
+			}
+		}
+		else
+		{
+			sprint (self, BOT_FIGHTING, "Angle Lock ON.\n");
+		}
+		self.tfstate = (self.tfstate | 32768);
+		if (self.enemy)
+		{
+			enemyang = self.enemy.angles;
+			enemyang_z = (TF_FLARE_LIT - enemyang_z);
+			self.camangle = (self.origin - self.enemy.origin);
+			self.camangle_z = (TF_FLARE_LIT - self.camangle_z);
+			self.camangle = vectoangles (self.camangle);
+			self.camangle = (self.camangle - enemyang);
+		}
+	}
+};
+
+void () CamRevAngleLock =
+{
+	local vector enemyang;
+
+	if ((self.tfstate & BOT_AVOIDING_HAZARD))
+	{
+		sprint (self, BOT_FIGHTING, "Reverse Angle Lock OFF.\n");
+		self.tfstate = (self.tfstate - (self.tfstate & BOT_AVOIDING_HAZARD));
+	}
+	else
+	{
+		if ((self.tfstate & FL_WATERJUMP))
+		{
+			sprint (self, BOT_FIGHTING, "Vector Lock OFF.\n");
+			self.tfstate = (self.tfstate - (self.tfstate & FL_WATERJUMP));
+		}
+		if ((self.tfstate & 32768))
+		{
+			sprint (self, BOT_FIGHTING, "Angle Lock OFF.\n");
+			self.tfstate = (self.tfstate - (self.tfstate & 32768));
+		}
+		if (!(self.tfstate & 4096))
+		{
+			sprint (self, BOT_FIGHTING, "Reverse Angle And Distance Lock ON.\n");
+			self.tfstate = (self.tfstate | 4096);
+			if (self.enemy)
+			{
+				self.camdist = vlen ((self.enemy.origin - self.origin));
+			}
+		}
+		else
+		{
+			sprint (self, BOT_FIGHTING, "Reverse Angle Lock ON.\n");
+		}
+		self.tfstate = (self.tfstate | BOT_AVOIDING_HAZARD);
+		if (self.enemy)
+		{
+			enemyang = self.enemy.angles;
+			enemyang_z = (TF_FLARE_LIT - enemyang_z);
+			self.camangle = (self.origin - self.enemy.origin);
+			self.camangle_z = (TF_FLARE_LIT - self.camangle_z);
+			self.camangle = vectoangles (self.camangle);
+			self.camangle = (self.camangle - enemyang);
+		}
+	}
+};
+
+void () CamProjectileLock =
+{
+	local entity te;
+
+	if ((self.tfstate & FL_ONGROUND))
+	{
+		sprint (self, BOT_FIGHTING, "Projectile Lock OFF.\n");
+		self.tfstate = (self.tfstate - (self.tfstate & FL_ONGROUND));
+		live_camera = TF_FLARE_LIT;
+		te = find (world, classname, "player");
+		while (((te != world) && (live_camera == TF_FLARE_LIT)))
+		{
+			if (((te.playerclass == TF_FLARE_LIT) && (te.tfstate & FL_ONGROUND)))
+			{
+				live_camera = TF_FLARE_OFF;
+			}
+			te = find (te, classname, "player");
+		}
+	}
+	else
+	{
+		sprint (self, BOT_FIGHTING, "Projectile Lock ON.\n");
+		self.tfstate = (self.tfstate | FL_ONGROUND);
+		live_camera = TF_FLARE_OFF;
+	}
+};
+
+void () CamProjectileZoom =
+{
+	if ((self.tfstate & FL_ITEM))
+	{
+		sprint (self, BOT_FIGHTING, "Projectile Zoom OFF.\n");
+		self.tfstate = (self.tfstate - (self.tfstate & FL_ITEM));
+	}
+	else
+	{
+		sprint (self, BOT_FIGHTING, "Projectile Zoom ON.\n");
+		self.tfstate = (self.tfstate | FL_ITEM);
+	}
+};
+
+void () CamProjectileLockOn =
+{
+	local entity te;
+	local float lockon;
+	local vector enemyang;
+
+	lockon = TF_FLARE_LIT;
+	te = find (world, classname, "player");
+	while (te)
+	{
+		if (((te.playerclass == TF_FLARE_LIT) && (te.tfstate & FL_ONGROUND)))
+		{
+			if ((te.enemy != world))
+			{
+				if ((te.enemy == self))
+				{
+					lockon = TF_FLARE_OFF;
+				}
+			}
+			else
+			{
+				traceline (te.origin, self.origin, TF_FLARE_LIT, te);
+				if ((trace_ent == self))
+				{
+					lockon = TF_FLARE_OFF;
+				}
+			}
+			if (lockon)
+			{
+				te.tfstate = (te.tfstate - (te.tfstate & FL_ONGROUND));
+				sprint (te, BOT_FIGHTING, "Projectile Locked!\n");
+				te.enemy = newmis;
+				newmis.enemy = te;
+				if ((te.tfstate & FL_ITEM))
+				{
+					enemyang = (normalize (te.enemy.velocity) * 20);
+					enemyang_z = (TF_FLARE_LIT - enemyang_z);
+					setorigin (te, (te.enemy.origin - enemyang));
+					te.tfstate = (te.tfstate | 4096);
+					te.camdist = 20;
+					te.camangle = vectoangles (te.enemy.velocity);
+					te.camangle_z = (TF_FLARE_LIT - te.camangle_z);
+				}
+			}
+		}
+		te = find (te, classname, "player");
+	}
+};
+
+void () CamProjectileLockOff =
+{
+	sprint (self.enemy, BOT_FIGHTING, "Removed Lock\n");
+	self.enemy.enemy = world;
+};
+
+void () CamOffset =
+{
+	if ((self.view_ofs == '0 0 22'))
+	{
+		self.view_ofs = '0 0 18';
+	}
+	else
+	{
+		if ((self.view_ofs == '0 0 18'))
+		{
+			self.view_ofs = '0 0 13';
+		}
+		else
+		{
+			if ((self.view_ofs == '0 0 13'))
+			{
+				self.view_ofs = '0 0 7';
+			}
+			else
+			{
+				if ((self.view_ofs == '0 0 7'))
+				{
+					self.view_ofs = '0 0 1';
+				}
+				else
+				{
+					if ((self.view_ofs == '0 0 1'))
+					{
+						self.view_ofs = '0 0 -10';
+					}
+					else
+					{
+						if ((self.view_ofs == '0 0 -10'))
+						{
+							self.view_ofs = '0 0 -18';
+						}
+						else
+						{
+							self.view_ofs = '0 0 22';
+						}
+					}
+				}
+			}
+		}
+	}
+};
+
+void () CamDrop =
+{
+	local entity te;
+	local entity prevte;
+	local entity cam;
+	local float tf;
+	local string st;
+
+	cam = spawn ();
+	cam.classname = "camera";
+	cam.origin = (self.origin + self.view_ofs);
+	cam.angles = self.angles;
+	setmodel (cam, "progs/spike.mdl");
+	tf = TF_FLARE_OFF;
+	prevte = self;
+	te = self.camera_list;
+	while ((te != world))
+	{
+		tf = (tf + TF_FLARE_OFF);
+		prevte = te;
+		te = te.camera_list;
+	}
+	prevte.camera_list = cam;
+	st = ftos (tf);
+	sprint3 (self, BOT_FIGHTING, "Camera ", st, " dropped.\n");
+};
+
+void () fadetoblack =
+{
+	local float fade;
+	local string x;
+
+	fade = BOT_AI_SCOUT;
+	while ((fade <= 250))
+	{
+		x = ftos (fade);
+		stuffcmd (self, "v_cshift 0 0 0 ");
+		stuffcmd (self, x);
+		stuffcmd (self, ";wait\n");
+		fade = (fade + BOT_AI_SCOUT);
+	}
+	stuffcmd (self, "v_cshift 0 0 0 255\n");
+};
+
+void () fadefromblack =
+{
+	local float fade;
+	local string x;
+
+	fade = 250;
+	while ((fade >= TF_FLARE_LIT))
+	{
+		x = ftos (fade);
+		stuffcmd (self, "v_cshift 0 0 0 ");
+		stuffcmd (self, x);
+		stuffcmd (self, ";wait\n");
+		fade = (fade - BOT_AI_SCOUT);
+	}
+	stuffcmd (self, "v_cshift 0 0 0 0\n");
+};
+
+void () fadetowhite =
+{
+	local float fade;
+	local string x;
+
+	fade = BOT_AI_SCOUT;
+	while ((fade <= 250))
+	{
+		x = ftos (fade);
+		stuffcmd (self, "v_cshift 255 255 255 ");
+		stuffcmd (self, x);
+		stuffcmd (self, ";wait\n");
+		fade = (fade + BOT_AI_SCOUT);
+	}
+	stuffcmd (self, "v_cshift 255 255 255 255\n");
+};
+
+void () fadefromwhite =
+{
+	local float fade;
+	local string x;
+
+	fade = 250;
+	while ((fade >= TF_FLARE_LIT))
+	{
+		x = ftos (fade);
+		stuffcmd (self, "v_cshift 255 255 255 ");
+		stuffcmd (self, x);
+		stuffcmd (self, ";wait\n");
+		fade = (fade - BOT_AI_SCOUT);
+	}
+	stuffcmd (self, "v_cshift 0 0 0 0\n");
+};

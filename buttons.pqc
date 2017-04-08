@@ -1,0 +1,156 @@
+void () button_return;
+
+void () button_wait =
+{
+	self.state = TF_FLARE_LIT;
+	self.nextthink = (self.ltime + self.wait);
+	self.think = button_return;
+	activator = self.enemy;
+	SUB_UseTargets ();
+	self.frame = TF_FLARE_OFF;
+};
+
+void () button_done =
+{
+	self.state = TF_FLARE_OFF;
+};
+
+void () button_return =
+{
+	self.goal_state = BOT_FIGHTING;
+	self.state = BOT_AI_FOLLOW;
+	SUB_CalcMove (self.pos1, self.speed, button_done);
+	self.frame = TF_FLARE_LIT;
+	if (self.health)
+	{
+		self.takedamage = TF_FLARE_OFF;
+	}
+};
+
+void () button_blocked =
+{
+};
+
+void () button_fire =
+{
+	if (((self.state == BOT_FIGHTING) || (self.state == TF_FLARE_LIT)))
+	{
+		return;
+	}
+	sound (self, BOT_FIGHTING, self.noise, TF_FLARE_OFF, TF_FLARE_OFF);
+	self.state = BOT_FIGHTING;
+	SUB_CalcMove (self.pos2, self.speed, button_wait);
+};
+
+void () button_use =
+{
+	self.enemy = activator;
+	button_fire ();
+};
+
+void () button_touch =
+{
+	local entity te;
+
+	if ((other.classname != "player"))
+	{
+		return;
+	}
+	if ((self.goal_activation & BOT_DEFEND))
+	{
+		return;
+	}
+	if (!Activated (self, other))
+	{
+		if ((self.else_goal != TF_FLARE_LIT))
+		{
+			te = Findgoal (self.else_goal);
+			if (te)
+			{
+				DoResults (te, other, (self.goal_result & BOT_FIGHTING));
+			}
+		}
+		return;
+	}
+	self.enemy = other;
+	button_fire ();
+};
+
+void () button_killed =
+{
+	if ((self.goal_activation & BOT_DEFEND))
+	{
+		return;
+	}
+	self.enemy = damage_attacker;
+	self.health = self.max_health;
+	self.takedamage = TF_FLARE_LIT;
+	button_fire ();
+};
+
+void () func_button =
+{
+	local float gtemp;
+	local float ftemp;
+
+	if ((CheckExistence () == TF_FLARE_LIT))
+	{
+		dremove (self);
+		return;
+	}
+	if ((self.sounds == TF_FLARE_LIT))
+	{
+		precache_sound ("buttons/airbut1.wav");
+		self.noise = "buttons/airbut1.wav";
+	}
+	if ((self.sounds == TF_FLARE_OFF))
+	{
+		precache_sound ("buttons/switch21.wav");
+		self.noise = "buttons/switch21.wav";
+	}
+	if ((self.sounds == BOT_FIGHTING))
+	{
+		precache_sound ("buttons/switch02.wav");
+		self.noise = "buttons/switch02.wav";
+	}
+	if ((self.sounds == BOT_AI_FOLLOW))
+	{
+		precache_sound ("buttons/switch04.wav");
+		self.noise = "buttons/switch04.wav";
+	}
+	SetMovedir ();
+	self.movetype = BOT_AI_BLAST;
+	self.solid = BOT_MOVING;
+	setmodel (self, self.model);
+	self.blocked = button_blocked;
+	self.use = button_use;
+	if (self.health)
+	{
+		self.max_health = self.health;
+		self.th_die = button_killed;
+		self.takedamage = TF_FLARE_OFF;
+	}
+	else
+	{
+		self.touch = button_touch;
+	}
+	if (!self.speed)
+	{
+		self.speed = 40;
+	}
+	if (!self.wait)
+	{
+		self.wait = TF_FLARE_OFF;
+	}
+	if (!self.lip)
+	{
+		self.lip = BOT_MOVING;
+	}
+	self.state = TF_FLARE_OFF;
+	self.pos1 = self.origin;
+	self.pos2 = (self.pos1 + (self.movedir * (fabs ((self.movedir * self.size)) - self.lip)));
+	if ((self.spawnflags & BOT_AVOIDING_HAZARD))
+	{
+		button_fire ();
+	}
+};

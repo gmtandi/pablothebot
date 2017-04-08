@@ -1,0 +1,389 @@
+void () Sentry_Rotate;
+float () Sentry_FindTarget;
+void () Sentry_FoundTarget;
+void () Sentry_HuntTarget;
+void () Sentry_Pain;
+void () Sentry_Die;
+float () Sentry_Fire;
+
+void () ai_face =
+{
+	self.ideal_yaw = vectoyaw ((self.enemy.origin - self.origin));
+	self.ideal_yaw = anglemod (self.ideal_yaw);
+	ChangeYaw ();
+};
+void () lvl1_sentry_atk3;
+
+void () lvl1_sentry_stand = [ 0, lvl1_sentry_stand ]
+{
+	Sentry_Rotate ();
+};
+
+void () lvl1_sentry_atk1 = [ 1, lvl1_sentry_atk3 ]
+{
+	ai_face ();
+	if (((((self.enemy == world) || (self.enemy.health <= TF_FLARE_LIT)) || !visible (self.enemy)) || (self.enemy.has_disconnected == TF_FLARE_OFF)))
+	{
+		lvl1_sentry_stand ();
+	}
+	else
+	{
+		if ((self.ammo_shells <= TF_FLARE_LIT))
+		{
+			lvl1_sentry_stand ();
+		}
+		else
+		{
+			if ((Sentry_Fire () == TF_FLARE_LIT))
+			{
+				lvl1_sentry_atk3 ();
+			}
+		}
+	}
+};
+
+void () lvl1_sentry_atk2 = [ 2, lvl1_sentry_atk3 ]
+{
+	ai_face ();
+	Sentry_Fire ();
+};
+
+void () lvl1_sentry_atk3 = [ 0, lvl1_sentry_atk1 ]
+{
+	ai_face ();
+};
+void () lvl2_sentry_atk3;
+
+void () lvl2_sentry_stand = [ 3, lvl2_sentry_stand ]
+{
+	Sentry_Rotate ();
+};
+
+void () lvl2_sentry_atk1 = [ 4, lvl2_sentry_atk2 ]
+{
+	ai_face ();
+	if (((((self.enemy == world) || (self.enemy.health <= TF_FLARE_LIT)) || !visible (self.enemy)) || (self.enemy.has_disconnected == TF_FLARE_OFF)))
+	{
+		lvl2_sentry_stand ();
+	}
+	else
+	{
+		if ((self.ammo_shells <= TF_FLARE_LIT))
+		{
+			lvl2_sentry_stand ();
+		}
+		else
+		{
+			if ((Sentry_Fire () == TF_FLARE_LIT))
+			{
+				lvl2_sentry_atk3 ();
+			}
+		}
+	}
+};
+
+void () lvl2_sentry_atk2 = [ 5, lvl2_sentry_atk3 ]
+{
+	ai_face ();
+	Sentry_Fire ();
+};
+
+void () lvl2_sentry_atk3 = [ 3, lvl2_sentry_atk1 ]
+{
+	ai_face ();
+	Sentry_Fire ();
+};
+void () lvl3_sentry_atk3;
+
+void () lvl3_sentry_stand = [ 6, lvl3_sentry_stand ]
+{
+	Sentry_Rotate ();
+};
+
+void () lvl3_sentry_atk1 = [ 7, lvl3_sentry_atk2 ]
+{
+	ai_face ();
+	if (((((self.enemy == world) || (self.enemy.health <= TF_FLARE_LIT)) || !visible (self.enemy)) || (self.enemy.has_disconnected == TF_FLARE_OFF)))
+	{
+		lvl3_sentry_stand ();
+	}
+	else
+	{
+		if (((self.ammo_shells <= TF_FLARE_LIT) && (self.ammo_rockets <= TF_FLARE_LIT)))
+		{
+			lvl3_sentry_stand ();
+		}
+		else
+		{
+			if ((Sentry_Fire () == TF_FLARE_LIT))
+			{
+				lvl3_sentry_atk3 ();
+			}
+		}
+	}
+};
+
+void () lvl3_sentry_atk2 = [ 8, lvl3_sentry_atk3 ]
+{
+	ai_face ();
+	Sentry_Fire ();
+};
+
+void () lvl3_sentry_atk3 = [ 6, lvl3_sentry_atk1 ]
+{
+	ai_face ();
+	Sentry_Fire ();
+};
+
+void () Sentry_Rotate =
+{
+	local string st;
+
+	if (Sentry_FindTarget ())
+	{
+		return;
+	}
+	if ((self.heat == TF_FLARE_LIT))
+	{
+		self.ideal_yaw = anglemod (self.waitmin);
+		ChangeYaw ();
+		anglemod (self.angles_y);
+		if ((anglemod (self.angles_y) <= (self.waitmin + TF_FLARE_OFF)))
+		{
+			self.heat = TF_FLARE_OFF;
+			if ((random () < 0.1))
+			{
+				sound (self, BOT_AI_FOLLOW, "weapons/turridle.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+			}
+		}
+	}
+	else
+	{
+		self.ideal_yaw = anglemod (self.waitmax);
+		ChangeYaw ();
+		anglemod (self.angles_y);
+		if ((anglemod (self.angles_y) >= (self.waitmax - TF_FLARE_OFF)))
+		{
+			self.heat = TF_FLARE_LIT;
+		}
+	}
+};
+
+float () Sentry_FindTarget =
+{
+	local entity client;
+	local float r;
+	local float gotone;
+	local float loopc;
+
+	r = TF_FLARE_LIT;
+	loopc = TF_FLARE_LIT;
+	gotone = TF_FLARE_LIT;
+	while (((loopc < BOT_AI_FOLLOW) && (gotone == TF_FLARE_LIT)))
+	{
+		client = checkclient ();
+		gotone = TF_FLARE_OFF;
+		if (!client)
+		{
+			gotone = TF_FLARE_LIT;
+		}
+		if (teamplay)
+		{
+			if (((client.team_no == self.team_no) && (self.team_no != TF_FLARE_LIT)))
+			{
+				gotone = TF_FLARE_LIT;
+			}
+			if (((client.undercover_team == self.team_no) && (self.team_no != TF_FLARE_LIT)))
+			{
+				gotone = TF_FLARE_LIT;
+			}
+		}
+		if ((client == self.real_owner))
+		{
+			gotone = TF_FLARE_LIT;
+		}
+		if (client.is_feigning)
+		{
+			gotone = TF_FLARE_LIT;
+		}
+		if ((client.flags & 128))
+		{
+			gotone = TF_FLARE_LIT;
+		}
+		if ((client.items & IT_INVISIBILITY))
+		{
+			gotone = TF_FLARE_LIT;
+		}
+		r = range (client);
+		if ((r == BOT_AI_FOLLOW))
+		{
+			gotone = TF_FLARE_LIT;
+		}
+		if (!visible (client))
+		{
+			gotone = TF_FLARE_LIT;
+		}
+		if ((r == TF_FLARE_OFF))
+		{
+			if (((client.show_hostile < time) && !infront (client)))
+			{
+				gotone = TF_FLARE_LIT;
+			}
+		}
+		else
+		{
+			if ((r == BOT_FIGHTING))
+			{
+				if (!infront (client))
+				{
+					gotone = TF_FLARE_LIT;
+				}
+			}
+		}
+		loopc = (loopc + TF_FLARE_OFF);
+	}
+	if (!gotone)
+	{
+		return (TF_FLARE_LIT);
+	}
+	self.enemy = client;
+	if ((self.enemy.classname != "player"))
+	{
+		self.enemy = self.enemy.enemy;
+		if ((self.enemy.classname != "player"))
+		{
+			self.enemy = world;
+			return (TF_FLARE_LIT);
+		}
+	}
+	Sentry_FoundTarget ();
+	return (TF_FLARE_OFF);
+};
+
+void () Sentry_FoundTarget =
+{
+	if (((self.ammo_shells > TF_FLARE_LIT) || ((self.ammo_rockets > TF_FLARE_LIT) && (self.weapon == BOT_AI_FOLLOW))))
+	{
+		sound (self, BOT_FIGHTING, "weapons/turrspot.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+	}
+	Sentry_HuntTarget ();
+	if ((self.super_damage_finished < time))
+	{
+		self.super_damage_finished = (time + 0.5);
+	}
+};
+
+void () Sentry_HuntTarget =
+{
+	self.goalentity = self.enemy;
+	if ((self.weapon == TF_FLARE_OFF))
+	{
+		self.think = lvl1_sentry_atk1;
+	}
+	else
+	{
+		if ((self.weapon == BOT_FIGHTING))
+		{
+			self.think = lvl2_sentry_atk1;
+		}
+		else
+		{
+			self.think = lvl3_sentry_atk1;
+		}
+	}
+	self.ideal_yaw = vectoyaw ((self.enemy.origin - self.origin));
+	self.nextthink = (time + 0.1);
+	SUB_AttackFinished (TF_FLARE_OFF);
+};
+
+void () Sentry_Pain =
+{
+	self.real_owner.StatusRefreshTime = (time + 0.2);
+};
+
+void () Sentry_Die =
+{
+	sprint (self.real_owner, BOT_FIGHTING, "Your sentry gun was destroyed.\n");
+	self.real_owner.has_sentry = TF_FLARE_LIT;
+	ThrowGib ("progs/tgib1.mdl", -70);
+	ThrowGib ("progs/tgib2.mdl", -70);
+	ThrowGib ("progs/tgib3.mdl", -70);
+	if ((self.classname == "building_sentrygun_base"))
+	{
+		if (self.oldenemy)
+		{
+			dremove (self.oldenemy);
+		}
+	}
+	else
+	{
+		dremove (self.trigger_field);
+	}
+	WriteByte (BOT_MOVING, 23);
+	WriteByte (BOT_MOVING, BOT_AI_FOLLOW);
+	WriteCoord (BOT_MOVING, self.origin_x);
+	WriteCoord (BOT_MOVING, self.origin_y);
+	WriteCoord (BOT_MOVING, self.origin_z);
+	multicast (self.origin, TF_FLARE_OFF);
+	BecomeExplosion ();
+};
+
+float () Sentry_Fire =
+{
+	local vector dir;
+
+	dir = (self.enemy.origin - self.origin);
+	if ((((self.ideal_yaw - anglemod (self.angles_y)) < -10) || ((self.ideal_yaw - anglemod (self.angles_y)) > BOT_AI_SCOUT)))
+	{
+		return (TF_FLARE_LIT);
+	}
+	muzzleflash ();
+	sound (self, TF_FLARE_OFF, "weapons/sniper.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+	self.ammo_shells = (self.ammo_shells - TF_FLARE_OFF);
+	if ((self.ammo_shells < TF_FLARE_LIT))
+	{
+		self.ammo_shells = TF_FLARE_LIT;
+		return (TF_FLARE_LIT);
+	}
+	deathmsg = 27;
+	FireBullets (TF_FLARE_OFF, dir, '0.1 0.1 0');
+	if ((((self.weapon == BOT_AI_FOLLOW) && (self.ammo_rockets > TF_FLARE_LIT)) && (self.super_damage_finished < time)))
+	{
+		sound (self, TF_FLARE_OFF, "weapons/rocket1i.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+		newmis = spawn ();
+		newmis.owner = self;
+		newmis.movetype = BOT_AI_FLAGRUN;
+		newmis.solid = BOT_FIGHTING;
+		newmis.velocity = (normalize ((self.enemy.origin - self.origin)) * 800);
+		newmis.angles = vectoangles (newmis.velocity);
+		newmis.weapon = 34;
+		newmis.touch = T_MissileTouch;
+		newmis.nextthink = (time + BOT_AI_GRAPPLE);
+		newmis.think = SUB_Remove;
+		setmodel (newmis, "progs/missile.mdl");
+		setsize (newmis, '0 0 0', '0 0 0');
+		setorigin (newmis, ((self.origin + (v_forward * BOT_DEFEND)) + '0 0 16'));
+		self.super_damage_finished = (time + BOT_AI_FOLLOW);
+		self.ammo_rockets = (self.ammo_rockets - TF_FLARE_OFF);
+		if ((self.ammo_rockets == BOT_AI_SCOUT))
+		{
+			sprint (self.real_owner, BOT_FIGHTING, "Sentry Gun is low on rockets.\n");
+		}
+	}
+	if (((self.ammo_shells == TF_FLARE_LIT) && (random () < 0.1)))
+	{
+		sprint (self.real_owner, BOT_FIGHTING, "Sentry Gun is out of shells.\n");
+	}
+	else
+	{
+		if ((self.ammo_shells == 20))
+		{
+			sprint (self.real_owner, BOT_FIGHTING, "Sentry Gun is low on shells.\n");
+		}
+	}
+	if ((((self.ammo_rockets == TF_FLARE_LIT) && (self.weapon == BOT_AI_FOLLOW)) && (random () < 0.1)))
+	{
+		sprint (self.real_owner, BOT_FIGHTING, "Sentry Gun is out of rockets.\n");
+	}
+	return (TF_FLARE_OFF);
+};

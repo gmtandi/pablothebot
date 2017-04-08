@@ -1,0 +1,410 @@
+void () plat_center_touch;
+void () plat_outside_touch;
+void () plat_trigger_use;
+void () plat_go_up;
+void () plat_go_down;
+void () plat_crush;
+
+void () plat_spawn_inside_trigger =
+{
+	local entity trigger;
+	local vector tmin;
+	local vector tmax;
+
+	trigger = spawn ();
+	trigger.touch = plat_center_touch;
+	trigger.movetype = TF_FLARE_LIT;
+	trigger.solid = TF_FLARE_OFF;
+	trigger.enemy = self;
+	trigger.team_no = self.team_no;
+	trigger.playerclass = self.playerclass;
+	trigger.items_allowed = self.items_allowed;
+	trigger.activate_goal_no = self.activate_goal_no;
+	trigger.inactivate_goal_no = self.inactivate_goal_no;
+	trigger.remove_goal_no = self.remove_goal_no;
+	trigger.restore_goal_no = self.restore_goal_no;
+	trigger.activate_group_no = self.activate_group_no;
+	trigger.inactivate_group_no = self.inactivate_group_no;
+	trigger.remove_group_no = self.remove_group_no;
+	trigger.restore_group_no = self.restore_group_no;
+	trigger.goal_activation = self.goal_activation;
+	trigger.goal_effects = self.goal_effects;
+	trigger.goal_result = self.goal_result;
+	trigger.goal_group = self.goal_group;
+	tmin = (self.mins + '25 25 0');
+	tmax = (self.maxs - '25 25 -8');
+	tmin_z = (tmax_z - ((self.pos1_z - self.pos2_z) + BOT_DEFEND));
+	if ((self.spawnflags & TF_FLARE_OFF))
+	{
+		tmax_z = (tmin_z + BOT_DEFEND);
+	}
+	if ((self.size_x <= 50))
+	{
+		tmin_x = ((self.mins_x + self.maxs_x) / BOT_FIGHTING);
+		tmax_x = (tmin_x + TF_FLARE_OFF);
+	}
+	if ((self.size_y <= 50))
+	{
+		tmin_y = ((self.mins_y + self.maxs_y) / BOT_FIGHTING);
+		tmax_y = (tmin_y + TF_FLARE_OFF);
+	}
+	setsize (trigger, tmin, tmax);
+};
+
+void () plat_hit_top =
+{
+	sound (self, BOT_FIGHTING, self.noise1, TF_FLARE_OFF, TF_FLARE_OFF);
+	self.state = TF_FLARE_LIT;
+	self.think = plat_go_down;
+	self.nextthink = (self.ltime + BOT_AI_FOLLOW);
+};
+
+void () plat_hit_bottom =
+{
+	sound (self, BOT_FIGHTING, self.noise1, TF_FLARE_OFF, TF_FLARE_OFF);
+	self.state = TF_FLARE_OFF;
+};
+
+void () plat_go_down =
+{
+	sound (self, BOT_FIGHTING, self.noise, TF_FLARE_OFF, TF_FLARE_OFF);
+	self.state = BOT_AI_FOLLOW;
+	SUB_CalcMove (self.pos2, self.speed, plat_hit_bottom);
+};
+
+void () plat_go_up =
+{
+	sound (self, BOT_FIGHTING, self.noise, TF_FLARE_OFF, TF_FLARE_OFF);
+	self.state = BOT_FIGHTING;
+	SUB_CalcMove (self.pos1, self.speed, plat_hit_top);
+};
+
+void () plat_center_touch =
+{
+	local entity te;
+
+	if ((other.classname != "player"))
+	{
+		return;
+	}
+	if (!Activated (self, other))
+	{
+		if ((self.else_goal != TF_FLARE_LIT))
+		{
+			te = Findgoal (self.else_goal);
+			if (te)
+			{
+				DoResults (te, other, (self.goal_result & BOT_FIGHTING));
+			}
+		}
+		return;
+	}
+	if ((other.health <= TF_FLARE_LIT))
+	{
+		return;
+	}
+	self = self.enemy;
+	if ((self.state == TF_FLARE_OFF))
+	{
+		plat_go_up ();
+	}
+	else
+	{
+		if ((self.state == TF_FLARE_LIT))
+		{
+			self.nextthink = (self.ltime + TF_FLARE_OFF);
+		}
+	}
+};
+
+void () plat_outside_touch =
+{
+	local entity te;
+
+	if ((other.classname != "player"))
+	{
+		return;
+	}
+	if (!Activated (self, other))
+	{
+		if ((self.else_goal != TF_FLARE_LIT))
+		{
+			te = Findgoal (self.else_goal);
+			if (te)
+			{
+				DoResults (te, other, (self.goal_result & BOT_FIGHTING));
+			}
+		}
+		return;
+	}
+	if ((other.health <= TF_FLARE_LIT))
+	{
+		return;
+	}
+	self = self.enemy;
+	if ((self.state == TF_FLARE_LIT))
+	{
+		plat_go_down ();
+	}
+};
+
+void () plat_trigger_use =
+{
+	if (self.think)
+	{
+		return;
+	}
+	plat_go_down ();
+};
+
+void () plat_crush =
+{
+	T_Damage (other, self, self, TF_FLARE_OFF);
+	if ((self.state == BOT_FIGHTING))
+	{
+		plat_go_down ();
+	}
+	else
+	{
+		if ((self.state == BOT_AI_FOLLOW))
+		{
+			plat_go_up ();
+		}
+		else
+		{
+			objerror ("plat_crush: bad self.state\n");
+		}
+	}
+};
+
+void () plat_use =
+{
+	self.use = SUB_Null;
+	if ((self.state != BOT_FIGHTING))
+	{
+		objerror ("plat_use: not in up state");
+	}
+	plat_go_down ();
+};
+
+void () func_plat =
+{
+	local entity t;
+
+	if ((CheckExistence () == TF_FLARE_LIT))
+	{
+		dremove (self);
+		return;
+	}
+	if (!self.t_length)
+	{
+		self.t_length = 80;
+	}
+	if (!self.t_width)
+	{
+		self.t_width = BOT_AI_SCOUT;
+	}
+	if ((self.sounds == TF_FLARE_LIT))
+	{
+		self.sounds = BOT_FIGHTING;
+	}
+	if ((self.sounds == TF_FLARE_OFF))
+	{
+		precache_sound ("plats/plat1.wav");
+		precache_sound ("plats/plat2.wav");
+		self.noise = "plats/plat1.wav";
+		self.noise1 = "plats/plat2.wav";
+	}
+	if ((self.sounds == BOT_FIGHTING))
+	{
+		precache_sound ("plats/medplat1.wav");
+		precache_sound ("plats/medplat2.wav");
+		self.noise = "plats/medplat1.wav";
+		self.noise1 = "plats/medplat2.wav";
+	}
+	self.mangle = self.angles;
+	self.angles = '0 0 0';
+	self.classname = "plat";
+	self.solid = BOT_MOVING;
+	self.movetype = BOT_AI_BLAST;
+	setorigin (self, self.origin);
+	setmodel (self, self.model);
+	setsize (self, self.mins, self.maxs);
+	self.blocked = plat_crush;
+	if (!self.speed)
+	{
+		self.speed = 150;
+	}
+	self.pos1 = self.origin;
+	self.pos2 = self.origin;
+	if (self.height)
+	{
+		self.pos2_z = (self.origin_z - self.height);
+	}
+	else
+	{
+		self.pos2_z = ((self.origin_z - self.size_z) + BOT_DEFEND);
+	}
+	self.use = plat_trigger_use;
+	plat_spawn_inside_trigger ();
+	if (self.targetname)
+	{
+		self.state = BOT_FIGHTING;
+		self.use = plat_use;
+	}
+	else
+	{
+		setorigin (self, self.pos2);
+		self.state = TF_FLARE_OFF;
+	}
+};
+void () train_next;
+void () func_train_find;
+
+void () train_blocked =
+{
+	if ((time < self.attack_finished))
+	{
+		return;
+	}
+	self.attack_finished = (time + 0.5);
+	T_Damage (other, self, self, self.dmg);
+};
+
+void () train_use =
+{
+	if ((self.think != func_train_find))
+	{
+		return;
+	}
+	train_next ();
+};
+
+void () train_wait =
+{
+	if (self.wait)
+	{
+		self.nextthink = (self.ltime + self.wait);
+		sound (self, BOT_FIGHTING, self.noise, TF_FLARE_OFF, TF_FLARE_OFF);
+	}
+	else
+	{
+		self.nextthink = (self.ltime + 0.1);
+	}
+	self.think = train_next;
+};
+
+void () train_next =
+{
+	local entity targ;
+
+	targ = find (world, targetname, self.target);
+	self.target = targ.target;
+	if (!self.target)
+	{
+		objerror ("train_next: no next target");
+	}
+	if (targ.wait)
+	{
+		self.wait = targ.wait;
+	}
+	else
+	{
+		self.wait = TF_FLARE_LIT;
+	}
+	sound (self, BOT_FIGHTING, self.noise1, TF_FLARE_OFF, TF_FLARE_OFF);
+	SUB_CalcMove ((targ.origin - self.mins), self.speed, train_wait);
+};
+
+void () func_train_find =
+{
+	local entity targ;
+
+	targ = find (world, targetname, self.target);
+	self.target = targ.target;
+	setorigin (self, (targ.origin - self.mins));
+	if (!self.targetname)
+	{
+		self.nextthink = (self.ltime + 0.1);
+		self.think = train_next;
+	}
+};
+
+void () func_train =
+{
+	if ((CheckExistence () == TF_FLARE_LIT))
+	{
+		dremove (self);
+		return;
+	}
+	if (!self.speed)
+	{
+		self.speed = 100;
+	}
+	if (!self.target)
+	{
+		objerror ("func_train without a target");
+	}
+	if (!self.dmg)
+	{
+		self.dmg = BOT_FIGHTING;
+	}
+	if ((self.sounds == TF_FLARE_LIT))
+	{
+		self.noise = "misc/null.wav";
+		precache_sound ("misc/null.wav");
+		self.noise1 = "misc/null.wav";
+		precache_sound ("misc/null.wav");
+	}
+	if ((self.sounds == TF_FLARE_OFF))
+	{
+		self.noise = "plats/train2.wav";
+		precache_sound ("plats/train2.wav");
+		self.noise1 = "plats/train1.wav";
+		precache_sound ("plats/train1.wav");
+	}
+	self.cnt = TF_FLARE_OFF;
+	self.solid = BOT_MOVING;
+	self.movetype = BOT_AI_BLAST;
+	self.blocked = train_blocked;
+	self.use = train_use;
+	self.classname = "train";
+	setmodel (self, self.model);
+	setsize (self, self.mins, self.maxs);
+	setorigin (self, self.origin);
+	self.nextthink = (self.ltime + 0.1);
+	self.think = func_train_find;
+};
+
+void () misc_teleporttrain =
+{
+	if ((CheckExistence () == TF_FLARE_LIT))
+	{
+		dremove (self);
+		return;
+	}
+	if (!self.speed)
+	{
+		self.speed = 100;
+	}
+	if (!self.target)
+	{
+		objerror ("func_train without a target");
+	}
+	self.cnt = TF_FLARE_OFF;
+	self.solid = TF_FLARE_LIT;
+	self.movetype = BOT_AI_BLAST;
+	self.blocked = train_blocked;
+	self.use = train_use;
+	self.avelocity = '100 200 300';
+	self.noise = "misc/null.wav";
+	precache_sound ("misc/null.wav");
+	self.noise1 = "misc/null.wav";
+	precache_sound ("misc/null.wav");
+	precache_model2 ("progs/teleport.mdl");
+	setmodel (self, "progs/teleport.mdl");
+	setsize (self, self.mins, self.maxs);
+	setorigin (self, self.origin);
+	self.nextthink = (self.ltime + 0.1);
+	self.think = func_train_find;
+};

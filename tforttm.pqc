@@ -1,0 +1,1141 @@
+void (float tno) TeamFortress_TeamSetColor;
+void (float tno, float scoretoadd) TeamFortress_TeamIncreaseScore;
+float (float tno) TeamFortress_TeamGetLives;
+float (float tno) TeamFortress_TeamGetMaxPlayers;
+string (float tno) TeamFortress_TeamGetColorString;
+float (float tno) TeamFortress_TeamGetIllegalClasses;
+
+float () TeamFortress_TeamPutPlayerInTeam =
+{
+	local float i;
+	local float j;
+	local float lowest;
+	local float likely_team;
+	local string st;
+
+	i = TF_FLARE_OFF;
+	likely_team = (random () * number_of_teams);
+	likely_team = ceil (likely_team);
+	if ((likely_team == TF_FLARE_LIT))
+	{
+		likely_team = number_of_teams;
+	}
+	lowest = 33;
+	while ((i < (number_of_teams + TF_FLARE_OFF)))
+	{
+		j = TeamFortress_TeamGetNoPlayers (i);
+		if ((j < lowest))
+		{
+			if ((TeamFortress_TeamGetMaxPlayers (i) > j))
+			{
+				lowest = j;
+				likely_team = i;
+			}
+		}
+		i = (i + TF_FLARE_OFF);
+	}
+	return (TeamFortress_TeamSet (likely_team));
+};
+
+float (float tno) TeamFortress_TeamGetColor =
+{
+	if ((tno == TF_FLARE_OFF))
+	{
+		return (14);
+	}
+	if ((tno == BOT_FIGHTING))
+	{
+		return (BOT_AI_GRAPPLE);
+	}
+	if ((tno == BOT_AI_FOLLOW))
+	{
+		return (13);
+	}
+	if ((tno == BOT_MOVING))
+	{
+		return (12);
+	}
+	return (TF_FLARE_LIT);
+};
+
+void (float tno) TeamFortress_TeamSetColor =
+{
+	if ((tno == TF_FLARE_OFF))
+	{
+		team1col = 14;
+		return;
+	}
+	if ((tno == BOT_FIGHTING))
+	{
+		team2col = BOT_AI_GRAPPLE;
+		return;
+	}
+	if ((tno == BOT_AI_FOLLOW))
+	{
+		team3col = 13;
+		return;
+	}
+	if ((tno == BOT_MOVING))
+	{
+		team4col = 12;
+		return;
+	}
+};
+
+string (float tno) GetTeamName =
+{
+	local string st;
+
+	if ((tno == TF_FLARE_OFF))
+	{
+		st = infokey (world, "team1");
+		if ((st == string_null))
+		{
+			st = infokey (world, "t1");
+		}
+		if (((st == string_null) || (st == "")))
+		{
+			return ("blue");
+		}
+	}
+	else
+	{
+		if ((tno == BOT_FIGHTING))
+		{
+			st = infokey (world, "team2");
+			if ((st == string_null))
+			{
+				st = infokey (world, "t2");
+			}
+			if (((st == string_null) || (st == "")))
+			{
+				return ("red");
+			}
+		}
+		else
+		{
+			if ((tno == BOT_AI_FOLLOW))
+			{
+				st = infokey (world, "team3");
+				if ((st == string_null))
+				{
+					st = infokey (world, "t3");
+				}
+				if (((st == string_null) || (st == "")))
+				{
+					return ("yell");
+				}
+			}
+			else
+			{
+				if ((tno == BOT_MOVING))
+				{
+					st = infokey (world, "team4");
+					if ((st == string_null))
+					{
+						st = infokey (world, "t4");
+					}
+					if (((st == string_null) || (st == "")))
+					{
+						return ("gren");
+					}
+				}
+				else
+				{
+					st = "\"\"";
+				}
+			}
+		}
+	}
+	return (st);
+};
+
+void (entity p) SetTeamName =
+{
+	local string st;
+
+	stuffcmd (p, "team ");
+	st = GetTeamName (p.team_no);
+	stuffcmd (p, st);
+	stuffcmd (p, "\n");
+};
+
+float (float tno) TeamFortress_TeamSet =
+{
+	local string st;
+	local float tc;
+
+	if ((teamplay < TF_FLARE_OFF))
+	{
+		sprint (self, BOT_FIGHTING, "Teamplay is not On, so FortressTeams are inactive.\n");
+		return (TF_FLARE_LIT);
+	}
+	if (((tno > number_of_teams) && (number_of_teams != TF_FLARE_LIT)))
+	{
+		sprint (self, BOT_FIGHTING, "There can be only ");
+		st = ftos (number_of_teams);
+		sprint (self, BOT_FIGHTING, st);
+		sprint (self, BOT_FIGHTING, " teams on this map.\nTry again\n");
+		return (TF_FLARE_LIT);
+	}
+	if ((self.team_no > TF_FLARE_LIT))
+	{
+		sprint (self, BOT_FIGHTING, "You're already in Team No ");
+		st = ftos (self.team_no);
+		sprint (self, BOT_FIGHTING, st);
+		sprint (self, BOT_FIGHTING, ".\n");
+		return (TF_FLARE_LIT);
+	}
+	tc = TeamFortress_TeamGetNoPlayers (tno);
+	if ((tc >= TeamFortress_TeamGetMaxPlayers (tno)))
+	{
+		sprint (self, BOT_FIGHTING, "That team is full. Pick another.\n");
+		return (TF_FLARE_LIT);
+	}
+	if ((TeamFortress_TeamGetColor (tno) == TF_FLARE_LIT))
+	{
+		TeamFortress_TeamSetColor (tno);
+		if ((TeamFortress_TeamGetColor (tno) == TF_FLARE_LIT))
+		{
+			sprint (self, BOT_FIGHTING, "You can't start a new team with your color, since another ");
+			sprint (self, BOT_FIGHTING, "already using that color. Change your pants color, then try again.\n");
+			return (TF_FLARE_LIT);
+		}
+		bprint (BOT_FIGHTING, self.netname);
+		bprint (BOT_FIGHTING, " has started Team No ");
+		st = ftos (tno);
+		bprint (BOT_FIGHTING, st);
+		bprint (BOT_FIGHTING, ".\n");
+		self.immune_to_check = (time + BOT_AI_SCOUT);
+		stuffcmd (self, "color ");
+		tc = (TeamFortress_TeamGetColor (tno) - TF_FLARE_OFF);
+		st = ftos (tc);
+		stuffcmd (self, st);
+		stuffcmd (self, "\n");
+		self.team_no = tno;
+		self.lives = TeamFortress_TeamGetLives (tno);
+		SetTeamName (self);
+		if ((self.playerclass == TF_FLARE_LIT))
+		{
+			if (TeamFortress_TeamIsCivilian (self.team_no))
+			{
+				self.impulse = TF_FLARE_OFF;
+				TeamFortress_ChangeClass ();
+			}
+		}
+		return (TF_FLARE_OFF);
+	}
+	bprint (BOT_FIGHTING, self.netname);
+	bprint (BOT_FIGHTING, " has joined Team No ");
+	st = ftos (tno);
+	bprint (BOT_FIGHTING, st);
+	bprint (BOT_FIGHTING, ".\n");
+	stuffcmd (self, "color ");
+	tc = (TeamFortress_TeamGetColor (tno) - TF_FLARE_OFF);
+	st = ftos (tc);
+	stuffcmd (self, st);
+	stuffcmd (self, "\n");
+	self.team_no = tno;
+	self.immune_to_check = (time + BOT_AI_SCOUT);
+	self.lives = TeamFortress_TeamGetLives (tno);
+	TeamFortress_TeamShowMemberClasses (self);
+	SetTeamName (self);
+	if ((self.playerclass == TF_FLARE_LIT))
+	{
+		if (TeamFortress_TeamIsCivilian (self.team_no))
+		{
+			self.impulse = TF_FLARE_OFF;
+			TeamFortress_ChangeClass ();
+		}
+	}
+	return (TF_FLARE_OFF);
+};
+
+void () TeamFortress_CheckTeamCheats =
+{
+	local string st;
+	local string sk;
+	local float tc;
+
+	if ((self.immune_to_check > time))
+	{
+		return;
+	}
+	if (self.deadflag)
+	{
+		return;
+	}
+	if (((self.team_no > TF_FLARE_LIT) && (teamplay > TF_FLARE_LIT)))
+	{
+		st = infokey (self, "bottomcolor");
+		tc = stof (st);
+		if (((self.playerclass == BOT_DEFEND) && (self.undercover_team != TF_FLARE_LIT)))
+		{
+			if (((TeamFortress_TeamGetColor (self.undercover_team) - TF_FLARE_OFF) != tc))
+			{
+				stuffcmd (self, "color ");
+				tc = (TeamFortress_TeamGetColor (self.undercover_team) - TF_FLARE_OFF);
+				st = ftos (tc);
+				stuffcmd (self, st);
+				stuffcmd (self, "\n");
+				bprint2 (TF_FLARE_OFF, self.netname, " has been kicked for changing color.\n");
+				sprint (self, BOT_FIGHTING, "You have been kicked for changing your pants color. Don't do it.\n");
+				stuffcmd (self, "disconnect\n");
+				return;
+			}
+		}
+		else
+		{
+			if ((tc != (TeamFortress_TeamGetColor (self.team_no) - TF_FLARE_OFF)))
+			{
+				stuffcmd (self, "color ");
+				tc = (TeamFortress_TeamGetColor (self.team_no) - TF_FLARE_OFF);
+				st = ftos (tc);
+				stuffcmd (self, st);
+				stuffcmd (self, "\n");
+				bprint2 (TF_FLARE_OFF, self.netname, " has been kicked for changing color.\n");
+				sprint (self, BOT_FIGHTING, "You have been kicked for changing your pants color. Don't do it.\n");
+				stuffcmd (self, "disconnect\n");
+				return;
+			}
+		}
+		if ((self.playerclass != TF_FLARE_LIT))
+		{
+			st = infokey (self, "skin");
+			tc = TF_FLARE_LIT;
+			if (((self.playerclass == BOT_DEFEND) && (self.undercover_skin != TF_FLARE_LIT)))
+			{
+				tc = BOT_DEFEND;
+				self.playerclass = self.undercover_skin;
+			}
+			if ((self.playerclass == TF_FLARE_OFF))
+			{
+				sk = "tf_scout";
+			}
+			else
+			{
+				if ((self.playerclass == BOT_FIGHTING))
+				{
+					sk = "tf_snipe";
+				}
+				else
+				{
+					if ((self.playerclass == BOT_AI_FOLLOW))
+					{
+						sk = "tf_sold";
+					}
+					else
+					{
+						if ((self.playerclass == BOT_MOVING))
+						{
+							sk = "tf_demo";
+						}
+						else
+						{
+							if ((self.playerclass == BOT_AI_GRAPPLE))
+							{
+								sk = "tf_medic";
+							}
+							else
+							{
+								if ((self.playerclass == BOT_AI_FLEE))
+								{
+									sk = "tf_hwguy";
+								}
+								else
+								{
+									if ((self.playerclass == BOT_AI_BLAST))
+									{
+										sk = "tf_pyro";
+									}
+									else
+									{
+										if ((self.playerclass == BOT_DEFEND))
+										{
+											sk = "tf_spy";
+										}
+										else
+										{
+											if ((self.playerclass == BOT_AI_FLAGRUN))
+											{
+												sk = "tf_eng";
+											}
+											else
+											{
+												if ((tc == BOT_DEFEND))
+												{
+													self.playerclass = BOT_DEFEND;
+												}
+												return;
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+			if ((st != sk))
+			{
+				TeamFortress_SetSkin (self);
+				bprint2 (TF_FLARE_OFF, self.netname, " has been kicked for changing skin.\n");
+				sprint (self, BOT_FIGHTING, "You have been kicked for changing your skin. Don't do it.\n");
+				stuffcmd (self, "disconnect\n");
+			}
+			if ((tc == BOT_DEFEND))
+			{
+				self.playerclass = BOT_DEFEND;
+			}
+		}
+		st = GetTeamName (self.team_no);
+		if ((st != infokey (self, "team")))
+		{
+			SetTeamName (self);
+			bprint2 (TF_FLARE_OFF, self.netname, " has been kicked for changing team.\n");
+			sprint (self, BOT_FIGHTING, "You have been kicked for changing your team. Don't do it.\n");
+			stuffcmd (self, "disconnect\n");
+			return;
+		}
+	}
+};
+
+void (float tno, float scoretoadd) TeamFortress_TeamIncreaseScore =
+{
+	local entity e;
+
+	if (((tno == TF_FLARE_LIT) || (scoretoadd == TF_FLARE_LIT)))
+	{
+		return;
+	}
+	if ((tno == TF_FLARE_OFF))
+	{
+		team1score = (team1score + scoretoadd);
+	}
+	if ((tno == BOT_FIGHTING))
+	{
+		team2score = (team2score + scoretoadd);
+	}
+	if ((tno == BOT_AI_FOLLOW))
+	{
+		team3score = (team3score + scoretoadd);
+	}
+	if ((tno == BOT_MOVING))
+	{
+		team4score = (team4score + scoretoadd);
+	}
+	if ((toggleflags & 128))
+	{
+		e = find (world, classname, "player");
+		while (e)
+		{
+			if ((e.team_no == tno))
+			{
+				e.frags = TeamFortress_TeamGetScore (tno);
+			}
+			e = find (e, classname, "player");
+		}
+	}
+};
+
+float (float tno) TeamFortress_TeamGetScore =
+{
+	if ((tno == TF_FLARE_OFF))
+	{
+		return (team1score);
+	}
+	if ((tno == BOT_FIGHTING))
+	{
+		return (team2score);
+	}
+	if ((tno == BOT_AI_FOLLOW))
+	{
+		return (team3score);
+	}
+	if ((tno == BOT_MOVING))
+	{
+		return (team4score);
+	}
+	return (TF_FLARE_LIT);
+};
+
+float (float tno) TeamFortress_TeamGetLives =
+{
+	if ((tno == TF_FLARE_OFF))
+	{
+		return (team1lives);
+	}
+	if ((tno == BOT_FIGHTING))
+	{
+		return (team2lives);
+	}
+	if ((tno == BOT_AI_FOLLOW))
+	{
+		return (team3lives);
+	}
+	if ((tno == BOT_MOVING))
+	{
+		return (team4lives);
+	}
+	return (TF_FLARE_LIT);
+};
+
+float (float tno) TeamFortress_TeamGetNoPlayers =
+{
+	local float size_team;
+	local entity search;
+	local string st;
+
+	search = find (world, classname, "player");
+	while ((search != world))
+	{
+		if ((search.team_no == tno))
+		{
+			size_team = (size_team + TF_FLARE_OFF);
+		}
+		search = find (search, classname, "player");
+	}
+	return (size_team);
+};
+
+float (float tno) TeamFortress_TeamGetMaxPlayers =
+{
+	if ((tno == TF_FLARE_OFF))
+	{
+		return (team1maxplayers);
+	}
+	if ((tno == BOT_FIGHTING))
+	{
+		return (team2maxplayers);
+	}
+	if ((tno == BOT_AI_FOLLOW))
+	{
+		return (team3maxplayers);
+	}
+	if ((tno == BOT_MOVING))
+	{
+		return (team4maxplayers);
+	}
+	return (TF_FLARE_LIT);
+};
+
+float () TeamFortress_TeamGetWinner =
+{
+	local float i;
+	local float j;
+	local float highest;
+	local float highestteam;
+
+	i = TF_FLARE_OFF;
+	highest = TF_FLARE_LIT;
+	highestteam = TF_FLARE_LIT;
+	while ((i < (number_of_teams + TF_FLARE_OFF)))
+	{
+		j = TeamFortress_TeamGetScore (i);
+		if ((j > highest))
+		{
+			highest = j;
+			highestteam = i;
+		}
+		i = (i + TF_FLARE_OFF);
+	}
+	return (highestteam);
+};
+
+float () TeamFortress_TeamGetSecond =
+{
+	local float i;
+	local float j;
+	local float highest;
+	local float highestteam;
+	local float secondteam;
+	local float second;
+
+	i = TF_FLARE_OFF;
+	highestteam = TeamFortress_TeamGetWinner ();
+	highest = TeamFortress_TeamGetScore (highestteam);
+	secondteam = TF_FLARE_LIT;
+	second = TF_FLARE_LIT;
+	while ((i < (number_of_teams + TF_FLARE_OFF)))
+	{
+		j = TeamFortress_TeamGetScore (i);
+		if (((j < highest) && (j > second)))
+		{
+			second = j;
+			secondteam = i;
+		}
+		i = (i + TF_FLARE_OFF);
+	}
+	return (secondteam);
+};
+
+void (float all) TeamFortress_TeamShowScores =
+{
+	local string st;
+	local float i;
+	local float j;
+
+	i = TF_FLARE_OFF;
+	if ((all == BOT_FIGHTING))
+	{
+		while ((i <= number_of_teams))
+		{
+			if ((TeamFortress_TeamGetColor (i) > TF_FLARE_LIT))
+			{
+				j = TeamFortress_TeamGetScore (i);
+				st = TeamFortress_TeamGetColorString (i);
+				bprint (BOT_FIGHTING, st);
+				bprint (BOT_FIGHTING, ": ");
+				st = ftos (j);
+				bprint (BOT_FIGHTING, st);
+				bprint (BOT_FIGHTING, " ");
+			}
+			i = (i + TF_FLARE_OFF);
+		}
+		bprint (BOT_FIGHTING, "\n");
+		return;
+	}
+	while ((i <= number_of_teams))
+	{
+		if ((TeamFortress_TeamGetColor (i) > TF_FLARE_LIT))
+		{
+			if (all)
+			{
+				bprint (BOT_FIGHTING, "Team ");
+			}
+			else
+			{
+				sprint (self, BOT_FIGHTING, "Team ");
+			}
+			st = ftos (i);
+			if (all)
+			{
+				bprint (BOT_FIGHTING, st);
+			}
+			else
+			{
+				sprint (self, BOT_FIGHTING, st);
+			}
+			if (all)
+			{
+				bprint (BOT_FIGHTING, " (");
+			}
+			else
+			{
+				sprint (self, BOT_FIGHTING, " (");
+			}
+			st = TeamFortress_TeamGetColorString (i);
+			if (all)
+			{
+				bprint (BOT_FIGHTING, st);
+			}
+			else
+			{
+				sprint (self, BOT_FIGHTING, st);
+			}
+			if (all)
+			{
+				bprint (BOT_FIGHTING, ") : ");
+			}
+			else
+			{
+				sprint (self, BOT_FIGHTING, ") : ");
+			}
+			j = TeamFortress_TeamGetScore (i);
+			st = ftos (j);
+			if (all)
+			{
+				bprint (BOT_FIGHTING, st);
+			}
+			else
+			{
+				sprint (self, BOT_FIGHTING, st);
+			}
+			if (all)
+			{
+				bprint (BOT_FIGHTING, "\n");
+			}
+			else
+			{
+				sprint (self, BOT_FIGHTING, "\n");
+			}
+		}
+		i = (i + TF_FLARE_OFF);
+	}
+};
+
+string (float tno) TeamFortress_TeamGetColorString =
+{
+	local float col;
+
+	col = TeamFortress_TeamGetColor (tno);
+	if ((col == TF_FLARE_OFF))
+	{
+		return ("White");
+	}
+	if ((col == BOT_FIGHTING))
+	{
+		return ("Brown");
+	}
+	if ((col == BOT_AI_FOLLOW))
+	{
+		return ("Blue");
+	}
+	if ((col == BOT_MOVING))
+	{
+		return ("Green");
+	}
+	if ((col == BOT_AI_GRAPPLE))
+	{
+		return ("Red");
+	}
+	if ((col == BOT_AI_FLEE))
+	{
+		return ("Tan");
+	}
+	if ((col == BOT_AI_BLAST))
+	{
+		return ("Pink");
+	}
+	if ((col == BOT_DEFEND))
+	{
+		return ("Orange");
+	}
+	if ((col == BOT_AI_FLAGRUN))
+	{
+		return ("Purple");
+	}
+	if ((col == BOT_AI_SCOUT))
+	{
+		return ("DarkPurple");
+	}
+	if ((col == 11))
+	{
+		return ("Grey");
+	}
+	if ((col == 12))
+	{
+		return ("DarkGreen");
+	}
+	if ((col == 13))
+	{
+		return ("Yellow");
+	}
+	return ("DarkBlue");
+};
+
+void (entity Player) TeamFortress_TeamShowMemberClasses =
+{
+	local entity e;
+	local float found;
+
+	found = TF_FLARE_LIT;
+	e = find (world, classname, "player");
+	while (e)
+	{
+		if ((((e.team_no == Player.team_no) || (e.team_no == TF_FLARE_LIT)) && (e != Player)))
+		{
+			if ((e.model != string_null))
+			{
+				if (!found)
+				{
+					found = TF_FLARE_OFF;
+					sprint (self, BOT_FIGHTING, "The other members of your team are:\n");
+				}
+				sprint (Player, BOT_FIGHTING, e.netname);
+				sprint (Player, BOT_FIGHTING, " : ");
+				TeamFortress_PrintClassName (Player, e.playerclass, (e.tfstate & BOT_DEFEND));
+			}
+		}
+		e = find (e, classname, "player");
+	}
+	if (!found)
+	{
+		sprint (Player, BOT_FIGHTING, "There are no other players on your team.\n");
+	}
+};
+
+void () CalculateTeamEqualiser =
+{
+	local float t1;
+	local float t2;
+	local float t3;
+	local float t4;
+	local float t_ave;
+	local float calc;
+
+	team1advantage = TF_FLARE_OFF;
+	team2advantage = TF_FLARE_OFF;
+	team3advantage = TF_FLARE_OFF;
+	team4advantage = TF_FLARE_OFF;
+	if ((number_of_teams < BOT_FIGHTING))
+	{
+		self.nextthink = (time + 60);
+		return;
+	}
+	if ((teamplay & BOT_AVOIDING_HAZARD))
+	{
+		t1 = TeamFortress_TeamGetNoPlayers (TF_FLARE_OFF);
+		t2 = TeamFortress_TeamGetNoPlayers (BOT_FIGHTING);
+		t3 = TeamFortress_TeamGetNoPlayers (BOT_AI_FOLLOW);
+		t4 = TeamFortress_TeamGetNoPlayers (BOT_MOVING);
+		if (((((t1 + t2) + t3) + t4) < TF_FLARE_OFF))
+		{
+			self.nextthink = (time + 30);
+			return;
+		}
+		t_ave = ((((t1 + t2) + t3) + t4) / number_of_teams);
+		if ((t1 > TF_FLARE_LIT))
+		{
+			calc = ((t_ave / t1) - TF_FLARE_OFF);
+			if ((calc != TF_FLARE_LIT))
+			{
+				calc = ((calc / BOT_AI_FOLLOW) + TF_FLARE_OFF);
+			}
+			else
+			{
+				calc = (calc + TF_FLARE_OFF);
+			}
+			team1advantage = calc;
+		}
+		if (((t2 > TF_FLARE_LIT) && (number_of_teams >= BOT_FIGHTING)))
+		{
+			calc = ((t_ave / t2) - TF_FLARE_OFF);
+			if ((calc != TF_FLARE_LIT))
+			{
+				calc = ((calc / BOT_AI_FOLLOW) + TF_FLARE_OFF);
+			}
+			else
+			{
+				calc = (calc + TF_FLARE_OFF);
+			}
+			team2advantage = calc;
+		}
+		if (((t3 > TF_FLARE_LIT) && (number_of_teams >= BOT_AI_FOLLOW)))
+		{
+			calc = ((t_ave / t3) - TF_FLARE_OFF);
+			if ((calc != TF_FLARE_LIT))
+			{
+				calc = ((calc / BOT_AI_FOLLOW) + TF_FLARE_OFF);
+			}
+			else
+			{
+				calc = (calc + TF_FLARE_OFF);
+			}
+			team3advantage = calc;
+		}
+		if (((t4 > TF_FLARE_LIT) && (number_of_teams >= BOT_MOVING)))
+		{
+			calc = ((t_ave / t4) - TF_FLARE_OFF);
+			if ((calc != TF_FLARE_LIT))
+			{
+				calc = ((calc / BOT_AI_FOLLOW) + TF_FLARE_OFF);
+			}
+			else
+			{
+				calc = (calc + TF_FLARE_OFF);
+			}
+			team4advantage = calc;
+		}
+	}
+	if ((teamplay & 64))
+	{
+		t1 = (team1score + 60);
+		if ((number_of_teams >= BOT_FIGHTING))
+		{
+			t2 = (team2score + 60);
+		}
+		else
+		{
+			t2 = TF_FLARE_LIT;
+		}
+		if ((number_of_teams >= BOT_AI_FOLLOW))
+		{
+			t3 = (team3score + 60);
+		}
+		else
+		{
+			t3 = TF_FLARE_LIT;
+		}
+		if ((number_of_teams >= BOT_MOVING))
+		{
+			t4 = (team4score + 60);
+		}
+		else
+		{
+			t4 = TF_FLARE_LIT;
+		}
+		t_ave = (((t2 + t3) + t4) / (number_of_teams - TF_FLARE_OFF));
+		calc = ((t_ave / t1) - TF_FLARE_OFF);
+		if ((calc != TF_FLARE_LIT))
+		{
+			calc = ((calc / BOT_AI_FOLLOW) + TF_FLARE_OFF);
+		}
+		else
+		{
+			calc = (calc + TF_FLARE_OFF);
+		}
+		team1advantage = (calc * team1advantage);
+		if ((number_of_teams >= BOT_FIGHTING))
+		{
+			t_ave = (((t1 + t3) + t4) / (number_of_teams - TF_FLARE_OFF));
+			calc = ((t_ave / t2) - TF_FLARE_OFF);
+			if ((calc != TF_FLARE_LIT))
+			{
+				calc = ((calc / BOT_AI_FOLLOW) + TF_FLARE_OFF);
+			}
+			else
+			{
+				calc = (calc + TF_FLARE_OFF);
+			}
+			team2advantage = (calc * team2advantage);
+		}
+		if ((number_of_teams >= BOT_AI_FOLLOW))
+		{
+			t_ave = (((t2 + t1) + t4) / (number_of_teams - TF_FLARE_OFF));
+			calc = ((t_ave / t3) - TF_FLARE_OFF);
+			if ((calc != TF_FLARE_LIT))
+			{
+				calc = ((calc / BOT_AI_FOLLOW) + TF_FLARE_OFF);
+			}
+			else
+			{
+				calc = (calc + TF_FLARE_OFF);
+			}
+			team3advantage = (calc * team3advantage);
+		}
+		if ((number_of_teams >= BOT_MOVING))
+		{
+			t_ave = (((t2 + t3) + t1) / (number_of_teams - TF_FLARE_OFF));
+			calc = ((t_ave / t4) - TF_FLARE_OFF);
+			if ((calc != TF_FLARE_LIT))
+			{
+				calc = ((calc / BOT_AI_FOLLOW) + TF_FLARE_OFF);
+			}
+			else
+			{
+				calc = (calc + TF_FLARE_OFF);
+			}
+			team4advantage = (calc * team4advantage);
+		}
+	}
+	self.nextthink = (time + BOT_AI_SCOUT);
+};
+
+void () SetupTeamEqualiser =
+{
+	local entity TE;
+
+	team1advantage = TF_FLARE_OFF;
+	team2advantage = TF_FLARE_OFF;
+	team3advantage = TF_FLARE_OFF;
+	team4advantage = TF_FLARE_OFF;
+	if (!(teamplay & (BOT_AVOIDING_HAZARD | 64)))
+	{
+		return;
+	}
+	TE = spawn ();
+	TE.classname = "Team Equaliser";
+	TE.think = CalculateTeamEqualiser;
+	TE.nextthink = (time + 30);
+};
+
+float (entity targ, entity attacker, float damage) TeamEqualiseDamage =
+{
+	local float adv;
+	local float newdam;
+
+	if (((targ.classname != "player") || (attacker.classname != "player")))
+	{
+		return (damage);
+	}
+	if ((((targ.team_no == TF_FLARE_LIT) || (attacker.team_no == TF_FLARE_LIT)) || (attacker.team_no == targ.team_no)))
+	{
+		return (damage);
+	}
+	if ((attacker.team_no == TF_FLARE_OFF))
+	{
+		adv = team1advantage;
+	}
+	else
+	{
+		if ((attacker.team_no == BOT_FIGHTING))
+		{
+			adv = team2advantage;
+		}
+		else
+		{
+			if ((attacker.team_no == BOT_AI_FOLLOW))
+			{
+				adv = team3advantage;
+			}
+			else
+			{
+				if ((attacker.team_no == BOT_MOVING))
+				{
+					adv = team4advantage;
+				}
+			}
+		}
+	}
+	if ((adv == TF_FLARE_LIT))
+	{
+		dprint ("There is a team with an advantage of 0\n");
+		adv = 0.1;
+	}
+	newdam = (damage * adv);
+	if ((targ.team_no == TF_FLARE_OFF))
+	{
+		adv = team1advantage;
+	}
+	else
+	{
+		if ((targ.team_no == BOT_FIGHTING))
+		{
+			adv = team2advantage;
+		}
+		else
+		{
+			if ((targ.team_no == BOT_AI_FOLLOW))
+			{
+				adv = team3advantage;
+			}
+			else
+			{
+				if ((targ.team_no == BOT_MOVING))
+				{
+					adv = team4advantage;
+				}
+			}
+		}
+	}
+	if ((adv == TF_FLARE_LIT))
+	{
+		dprint ("There is a team with an advantage of 0\n");
+		adv = 0.1;
+	}
+	newdam = (newdam * (TF_FLARE_OFF / adv));
+	return (newdam);
+};
+
+void () TeamFortress_StatusQuery =
+{
+	local float ft;
+	local string st;
+
+	sprint (self, BOT_FIGHTING, "players per team: ");
+	ft = TeamFortress_TeamGetNoPlayers (TF_FLARE_OFF);
+	st = ftos (ft);
+	sprint (self, BOT_FIGHTING, st);
+	sprint (self, BOT_FIGHTING, "  ");
+	ft = TeamFortress_TeamGetNoPlayers (BOT_FIGHTING);
+	st = ftos (ft);
+	sprint (self, BOT_FIGHTING, st);
+	sprint (self, BOT_FIGHTING, "  ");
+	ft = TeamFortress_TeamGetNoPlayers (BOT_AI_FOLLOW);
+	st = ftos (ft);
+	sprint (self, BOT_FIGHTING, st);
+	sprint (self, BOT_FIGHTING, "  ");
+	ft = TeamFortress_TeamGetNoPlayers (BOT_MOVING);
+	st = ftos (ft);
+	sprint (self, BOT_FIGHTING, st);
+	sprint (self, BOT_FIGHTING, "\n");
+	sprint (self, BOT_FIGHTING, "    equalisation: ");
+	st = ftos (team1advantage);
+	sprint (self, BOT_FIGHTING, st);
+	sprint (self, BOT_FIGHTING, "  ");
+	st = ftos (team2advantage);
+	sprint (self, BOT_FIGHTING, st);
+	sprint (self, BOT_FIGHTING, "  ");
+	st = ftos (team3advantage);
+	sprint (self, BOT_FIGHTING, st);
+	sprint (self, BOT_FIGHTING, "  ");
+	st = ftos (team4advantage);
+	sprint (self, BOT_FIGHTING, st);
+	sprint (self, BOT_FIGHTING, "\n");
+	st = ftos (teamplay);
+	sprint (self, BOT_FIGHTING, "Teamplay is ");
+	sprint (self, BOT_FIGHTING, st);
+	sprint (self, BOT_FIGHTING, "\n");
+};
+
+float (float tno) TeamFortress_TeamGetIllegalClasses =
+{
+	if ((tno == TF_FLARE_OFF))
+	{
+		return (illegalclasses1);
+	}
+	if ((tno == BOT_FIGHTING))
+	{
+		return (illegalclasses2);
+	}
+	if ((tno == BOT_AI_FOLLOW))
+	{
+		return (illegalclasses3);
+	}
+	if ((tno == BOT_MOVING))
+	{
+		return (illegalclasses4);
+	}
+	return (TF_FLARE_LIT);
+};
+
+float (float tno) TeamFortress_TeamIsCivilian =
+{
+	local entity te;
+
+	if ((tno == TF_FLARE_OFF))
+	{
+		if ((civilianteams & TF_FLARE_OFF))
+		{
+			return (TF_FLARE_OFF);
+		}
+	}
+	else
+	{
+		if ((tno == BOT_FIGHTING))
+		{
+			if ((civilianteams & BOT_FIGHTING))
+			{
+				return (TF_FLARE_OFF);
+			}
+		}
+		else
+		{
+			if ((tno == BOT_AI_FOLLOW))
+			{
+				if ((civilianteams & BOT_MOVING))
+				{
+					return (TF_FLARE_OFF);
+				}
+			}
+			else
+			{
+				if ((civilianteams & BOT_DEFEND))
+				{
+					return (TF_FLARE_OFF);
+				}
+			}
+		}
+	}
+	return (TF_FLARE_LIT);
+};
+
+void (float tno, entity ignore, string st) teamsprint =
+{
+	local entity te;
+
+	if ((tno == TF_FLARE_LIT))
+	{
+		return;
+	}
+	te = find (world, classname, "player");
+	while (te)
+	{
+		if (((te.team_no == tno) && (te != ignore)))
+		{
+			sprint (te, BOT_FIGHTING, st);
+		}
+		te = find (te, classname, "player");
+	}
+};

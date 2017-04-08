@@ -1,0 +1,2827 @@
+void () player_pain;
+void () player_stand1;
+void (vector org) spawn_tfog;
+void (vector org, entity death_owner) spawn_tdeath;
+float modelindex_eyes;
+float modelindex_player;
+float modelindex_null;
+void () TeamFortress_CheckTeamCheats;
+void (entity Viewer, float pc, float rpc) TeamFortress_PrintClassName;
+void () TeamFortress_RemoveTimers;
+void (float Suicided) TeamFortress_SetupRespawn;
+float (float pc) IsLegalClass;
+void () SetupTeamEqualiser;
+void (entity p) SetTeamName;
+void () Service_Grapple;
+void (entity AD) ParseTFDetect;
+entity (float ino) Finditem;
+void (entity Item, entity AP, entity Goal) tfgoalitem_GiveToPlayer;
+void (entity Goal, entity AP, entity ActivatingGoal) AttemptToActivate;
+void () CTF_FlagCheck;
+string nextmap;
+float intermission_running;
+float intermission_exittime;
+
+void () info_intermission =
+{
+	if ((CheckExistence () == TF_FLARE_LIT))
+	{
+		dremove (self);
+		return;
+	}
+};
+
+void () SetChangeParms =
+{
+	if ((self.health <= TF_FLARE_LIT))
+	{
+		SetNewParms ();
+		return;
+	}
+	self.items = (self.items - (self.items & (((((131072 | 262144) | IT_INVISIBILITY) | 1048576) | 2097152) | 4194304)));
+	if ((self.health > 100))
+	{
+		self.health = 100;
+	}
+	if ((self.health < 50))
+	{
+		self.health = 50;
+	}
+	parm1 = self.items;
+	parm2 = self.health;
+	parm3 = self.armorvalue;
+	if ((self.ammo_shells < 25))
+	{
+		parm4 = 25;
+	}
+	else
+	{
+		parm4 = self.ammo_shells;
+	}
+	parm5 = self.ammo_nails;
+	parm6 = self.ammo_rockets;
+	parm7 = self.ammo_cells;
+	parm8 = self.current_weapon;
+	parm9 = (self.armortype * 100);
+	parm10 = toggleflags;
+	parm11 = TF_FLARE_LIT;
+	parm12 = TF_FLARE_LIT;
+	parm13 = self.StatusBarRes;
+	parm14 = self.StatusBarSize;
+};
+
+void () SetNewParms =
+{
+	parm1 = TF_FLARE_LIT;
+	parm2 = 100;
+	parm3 = TF_FLARE_LIT;
+	parm4 = 25;
+	parm5 = TF_FLARE_LIT;
+	parm6 = TF_FLARE_LIT;
+	parm6 = TF_FLARE_LIT;
+	parm8 = TF_FLARE_OFF;
+	parm9 = TF_FLARE_LIT;
+	parm10 = TF_FLARE_LIT;
+	parm11 = TF_FLARE_LIT;
+	parm12 = TF_FLARE_LIT;
+	parm13 = TF_FLARE_LIT;
+	parm14 = TF_FLARE_LIT;
+};
+
+void () autoteam_think =
+{
+	toggleflags = (toggleflags | 64);
+	dremove (self);
+};
+
+void () DecodeLevelParms =
+{
+	local string st;
+	local entity ent;
+	local float autoteam_time;
+
+	if (serverflags)
+	{
+		if ((world.model == "maps/start.bsp"))
+		{
+			SetNewParms ();
+		}
+	}
+	self.items = parm1;
+	self.health = parm2;
+	self.armorvalue = parm3;
+	self.ammo_shells = parm4;
+	self.ammo_nails = parm5;
+	self.ammo_rockets = parm6;
+	self.ammo_cells = parm7;
+	self.current_weapon = parm8;
+	self.armortype = (parm9 * 0.01);
+	if ((toggleflags == TF_FLARE_LIT))
+	{
+		toggleflags = parm10;
+		allow_hook = TF_FLARE_LIT;
+		invis_only = TF_FLARE_LIT;
+		if ((coop || !deathmatch))
+		{
+			toggleflags = (toggleflags | TF_FLARE_OFF);
+		}
+		nextmap = mapname;
+		allow_hook = TF_FLARE_OFF;
+		ent = find (world, classname, "info_tfdetect");
+		if ((ent != world))
+		{
+			if ((teamplay == TF_FLARE_LIT))
+			{
+				cvar_set ("teamplay", "21?TeamFortress");
+			}
+			ParseTFDetect (ent);
+			if (((number_of_teams <= TF_FLARE_LIT) || (number_of_teams >= BOT_AI_GRAPPLE)))
+			{
+				number_of_teams = BOT_MOVING;
+			}
+		}
+		else
+		{
+			ent = find (world, classname, "info_player_team1");
+			if (((ent != world) || (CTF_Map == TF_FLARE_OFF)))
+			{
+				CTF_Map = TF_FLARE_OFF;
+				if ((teamplay == TF_FLARE_LIT))
+				{
+					cvar_set ("teamplay", "21?TeamFortress");
+				}
+				ent = spawn ();
+				ent.nextthink = (time + 30);
+				ent.think = CTF_FlagCheck;
+				number_of_teams = BOT_FIGHTING;
+			}
+			else
+			{
+				number_of_teams = BOT_MOVING;
+			}
+			cvar_set ("sv_aim", "1");
+			team1lives = CONTENT_EMPTY;
+			team2lives = CONTENT_EMPTY;
+			team3lives = CONTENT_EMPTY;
+			team4lives = CONTENT_EMPTY;
+			illegalclasses1 = TF_FLARE_LIT;
+			illegalclasses2 = TF_FLARE_LIT;
+			illegalclasses3 = TF_FLARE_LIT;
+			illegalclasses4 = TF_FLARE_LIT;
+			team1maxplayers = 100;
+			team2maxplayers = 100;
+			team3maxplayers = 100;
+			team4maxplayers = 100;
+			civilianteams = TF_FLARE_LIT;
+		}
+		bprint (BOT_FIGHTING, "Mapname: ");
+		bprint (BOT_FIGHTING, mapname);
+		bprint (BOT_FIGHTING, "\n");
+		SetupTeamEqualiser ();
+		if (TF_FLARE_OFF)
+		{
+			toggleflags = (toggleflags - (toggleflags & 128));
+		}
+		if (TF_FLARE_LIT)
+		{
+			toggleflags = (toggleflags | 128);
+		}
+		if (TF_FLARE_OFF)
+		{
+			toggleflags = (toggleflags | BOT_FIGHTING);
+		}
+		st = infokey (world, "temp1");
+		toggleflags = ((toggleflags | FL_ITEM) | stof (st));
+		autoteam_time = 30;
+		st = infokey (world, "a");
+		if ((st == string_null))
+		{
+			st = infokey (world, "autoteam");
+		}
+		if ((st == "on"))
+		{
+			toggleflags = (toggleflags | 64);
+		}
+		else
+		{
+			if ((st == "off"))
+			{
+				toggleflags = (toggleflags - (toggleflags & 64));
+			}
+			else
+			{
+				if ((stof (st) != TF_FLARE_LIT))
+				{
+					toggleflags = (toggleflags | 64);
+					autoteam_time = stof (st);
+				}
+			}
+		}
+		st = infokey (world, "t");
+		if ((st == string_null))
+		{
+			st = infokey (world, "teamfrags");
+		}
+		if ((st == "on"))
+		{
+			toggleflags = (toggleflags | 128);
+		}
+		else
+		{
+			if ((st == "off"))
+			{
+				toggleflags = (toggleflags - (toggleflags & 128));
+			}
+		}
+		st = infokey (world, "g");
+		if ((st == string_null))
+		{
+			st = infokey (world, "grapple");
+		}
+		if ((st == "off"))
+		{
+			allow_hook = TF_FLARE_LIT;
+		}
+		if ((!(toggleflags & FL_PARTIALGROUND) && (st != "on")))
+		{
+			allow_hook = TF_FLARE_LIT;
+		}
+		st = infokey (world, "spy");
+		if ((st == "off"))
+		{
+			spy_off = TF_FLARE_OFF;
+		}
+		st = infokey (world, "s");
+		if ((st == string_null))
+		{
+			st = infokey (world, "spyinvis");
+		}
+		if (((st == "on") || (toggleflags & FL_ONGROUND)))
+		{
+			invis_only = TF_FLARE_OFF;
+		}
+		else
+		{
+			if ((st == "off"))
+			{
+				invis_only = TF_FLARE_LIT;
+			}
+		}
+		st = infokey (world, "rd");
+		if ((st == string_null))
+		{
+			st = infokey (world, "respawn_delay");
+		}
+		respawn_delay_time = stof (st);
+		if (respawn_delay_time)
+		{
+			toggleflags = (toggleflags | BOT_MOVING);
+		}
+		if (((toggleflags & BOT_MOVING) && (respawn_delay_time == TF_FLARE_LIT)))
+		{
+			respawn_delay_time = BOT_AI_GRAPPLE;
+		}
+		if ((toggleflags & 64))
+		{
+			toggleflags = (toggleflags - (toggleflags & 64));
+			ent = spawn ();
+			ent.nextthink = (time + autoteam_time);
+			ent.think = autoteam_think;
+		}
+	}
+	if (parm11)
+	{
+		self.tfstate = parm11;
+	}
+	if ((self.playerclass == TF_FLARE_LIT))
+	{
+		self.playerclass = parm12;
+	}
+	if (parm13)
+	{
+		self.StatusBarRes = parm13;
+	}
+	if (parm14)
+	{
+		self.StatusBarSize = parm14;
+	}
+};
+
+entity () FindIntermission =
+{
+	local entity spot;
+	local float cyc;
+
+	spot = find (world, classname, "info_intermission");
+	if (spot)
+	{
+		cyc = (random () * TF_FLARE_OFF);
+		return (spot);
+	}
+	spot = find (world, classname, "info_player_start");
+	if (spot)
+	{
+		return (spot);
+	}
+	spot = find (world, classname, "info_player_deathmatch");
+	if (spot)
+	{
+		cyc = (random () * BOT_AI_FLEE);
+		while ((cyc > TF_FLARE_OFF))
+		{
+			spot = find (spot, classname, "info_player_deathmatch");
+			if (!spot)
+			{
+				spot = find (spot, classname, "info_player_deathmatch");
+			}
+			cyc = (cyc - TF_FLARE_OFF);
+		}
+		return (spot);
+	}
+	objerror ("FindIntermission: no spot");
+};
+
+entity (entity start_point) FindNextIntermission =
+{
+	local entity spot;
+	local float cyc;
+
+	if (deathmatch)
+	{
+		if (((start_point.classname == "info_intermission") || (start_point == world)))
+		{
+			spot = find (start_point, classname, "info_intermission");
+			if (spot)
+			{
+				return (spot);
+			}
+			else
+			{
+				start_point = world;
+			}
+		}
+		if (((start_point.classname == "info_player_deathmatch") || (start_point == world)))
+		{
+			spot = find (start_point, classname, "info_player_deathmatch");
+			if (spot)
+			{
+				return (spot);
+			}
+		}
+		spot = find (world, classname, "info_intermission");
+		if (spot)
+		{
+			return (spot);
+		}
+		spot = find (world, classname, "info_player_deathmatch");
+		if (spot)
+		{
+			return (spot);
+		}
+	}
+	else
+	{
+		spot = find (world, classname, "info_player_start");
+		if (spot)
+		{
+			return (spot);
+		}
+	}
+	return (FindIntermission ());
+};
+
+void () TF_MovePlayer =
+{
+	local entity place;
+
+	place = FindNextIntermission (self.observer_list);
+	self.observer_list = place;
+	setorigin (self, (place.origin + '0 0 1'));
+	self.angles = place.angles;
+	self.fixangle = TF_FLARE_OFF;
+};
+
+void () GotoNextMap =
+{
+	local float nextlevel;
+	local string sl;
+	local entity te;
+
+	if ((nextmap != mapname))
+	{
+		changelevel (nextmap);
+		already_chosen_map = TF_FLARE_OFF;
+	}
+	if (!already_chosen_map)
+	{
+		sl = infokey (world, "n");
+		nextlevel = stof (sl);
+		nextlevel = (nextlevel + TF_FLARE_OFF);
+		sl = ftos (nextlevel);
+		localcmd ("serverinfo n ");
+		localcmd (sl);
+		localcmd ("\n");
+		localcmd ("exec qwmcycle/map");
+		localcmd (sl);
+		localcmd (".cfg\n");
+		already_chosen_map = TF_FLARE_OFF;
+	}
+	if ((infokey (world, "n") == "0"))
+	{
+		already_chosen_map = TF_FLARE_LIT;
+	}
+};
+
+void () ExitIntermission =
+{
+	dprint ("Exiting intermission...\n");
+	if (deathmatch)
+	{
+		dprint ("Exit Intermission in Deathmatch.\n");
+		GotoNextMap ();
+		return;
+	}
+	intermission_exittime = (time + TF_FLARE_OFF);
+	intermission_running = (intermission_running + TF_FLARE_OFF);
+	if ((intermission_running == BOT_FIGHTING))
+	{
+		if ((world.model == "maps/e1m7.bsp"))
+		{
+			WriteByte (BOT_FIGHTING, BOT_AVOIDING_HAZARD);
+			WriteByte (BOT_FIGHTING, BOT_FIGHTING);
+			WriteByte (BOT_FIGHTING, BOT_AI_FOLLOW);
+			if (!cvar ("registered"))
+			{
+				WriteByte (BOT_FIGHTING, 31);
+				WriteString (BOT_FIGHTING, "As the corpse of the monstrous entity\nChthon sinks back into the lava whence\nit rose, you grip the Rune of Earth\nMagic tightly. Now that you have\nconquered the Dimension of the Doomed,\nrealm of Earth Magic, you are ready to\ncomplete your task in the other three\nhaunted lands of Quake. Or are you? If\nyou don't register Quake, you'll never\nknow what awaits you in the Realm of\nBlack Magic, the Netherworld, and the\nElder World!");
+			}
+			else
+			{
+				WriteByte (BOT_FIGHTING, 31);
+				WriteString (BOT_FIGHTING, "As the corpse of the monstrous entity\nChthon sinks back into the lava whence\nit rose, you grip the Rune of Earth\nMagic tightly. Now that you have\nconquered the Dimension of the Doomed,\nrealm of Earth Magic, you are ready to\ncomplete your task. A Rune of magic\npower lies at the end of each haunted\nland of Quake. Go forth, seek the\ntotality of the four Runes!");
+			}
+			return;
+		}
+		else
+		{
+			if ((world.model == "maps/e2m6.bsp"))
+			{
+				WriteByte (BOT_FIGHTING, BOT_AVOIDING_HAZARD);
+				WriteByte (BOT_FIGHTING, BOT_FIGHTING);
+				WriteByte (BOT_FIGHTING, BOT_AI_FOLLOW);
+				WriteByte (BOT_FIGHTING, 31);
+				WriteString (BOT_FIGHTING, "The Rune of Black Magic throbs evilly in\nyour hand and whispers dark thoughts\ninto your brain. You learn the inmost\nlore of the Hell-Mother; Shub-Niggurath!\nYou now know that she is behind all the\nterrible plotting which has led to so\nmuch death and horror. But she is not\ninviolate! Armed with this Rune, you\nrealize that once all four Runes are\ncombined, the gate to Shub-Niggurath's\nPit will open, and you can face the\nWitch-Goddess herself in her frightful\notherworld cathedral.");
+				return;
+			}
+			else
+			{
+				if ((world.model == "maps/e3m6.bsp"))
+				{
+					WriteByte (BOT_FIGHTING, BOT_AVOIDING_HAZARD);
+					WriteByte (BOT_FIGHTING, BOT_FIGHTING);
+					WriteByte (BOT_FIGHTING, BOT_AI_FOLLOW);
+					WriteByte (BOT_FIGHTING, 31);
+					WriteString (BOT_FIGHTING, "The charred viscera of diabolic horrors\nbubble viscously as you seize the Rune\nof Hell Magic. Its heat scorches your\nhand, and its terrible secrets blight\nyour mind. Gathering the shreds of your\ncourage, you shake the devil's shackles\nfrom your soul, and become ever more\nhard and determined to destroy the\nhideous creatures whose mere existence\nthreatens the souls and psyches of all\nthe population of Earth.");
+					return;
+				}
+				else
+				{
+					if ((world.model == "maps/e4m7.bsp"))
+					{
+						WriteByte (BOT_FIGHTING, BOT_AVOIDING_HAZARD);
+						WriteByte (BOT_FIGHTING, BOT_FIGHTING);
+						WriteByte (BOT_FIGHTING, BOT_AI_FOLLOW);
+						WriteByte (BOT_FIGHTING, 31);
+						WriteString (BOT_FIGHTING, "Despite the awful might of the Elder\nWorld, you have achieved the Rune of\nElder Magic, capstone of all types of\narcane wisdom. Beyond good and evil,\nbeyond life and death, the Rune\npulsates, heavy with import. Patient and\npotent, the Elder Being Shub-Niggurath\nweaves her dire plans to clear off all\nlife from the Earth, and bring her own\nfoul offspring to our world! For all the\ndwellers in these nightmare dimensions\nare her descendants! Once all Runes of\nmagic power are united, the energy\nbehind them will blast open the Gateway\nto Shub-Niggurath, and you can travel\nthere to foil the Hell-Mother's plots\nin person.");
+						return;
+					}
+				}
+			}
+		}
+		GotoNextMap ();
+	}
+	if ((intermission_running == BOT_AI_FOLLOW))
+	{
+		if (!cvar ("registered"))
+		{
+			WriteByte (BOT_FIGHTING, 33);
+			return;
+		}
+		if (((serverflags & 15) == 15))
+		{
+			WriteByte (BOT_FIGHTING, 31);
+			WriteString (BOT_FIGHTING, "Now, you have all four Runes. You sense\ntremendous invisible forces moving to\nunseal ancient barriers. Shub-Niggurath\nhad hoped to use the Runes Herself to\nclear off the Earth, but now instead,\nyou will use them to enter her home and\nconfront her as an avatar of avenging\nEarth-life. If you defeat her, you will\nbe remembered forever as the savior of\nthe planet. If she conquers, it will be\nas if you had never been born.");
+			return;
+		}
+	}
+	dprint ("Exit Intermission.\n");
+	GotoNextMap ();
+};
+
+void () IntermissionThink =
+{
+	if ((time < intermission_exittime))
+	{
+		return;
+	}
+	if (((!self.button0 && !self.button1) && !self.button2))
+	{
+		return;
+	}
+	dprint ("Intermission think.\n");
+	GotoNextMap ();
+};
+
+void () execute_changelevel =
+{
+	local entity pos;
+
+	dprint ("execute_changelevel()\n");
+	intermission_running = TF_FLARE_OFF;
+	intermission_exittime = (time + BOT_AI_GRAPPLE);
+	pos = FindIntermission ();
+	WriteByte (BOT_FIGHTING, BOT_AVOIDING_HAZARD);
+	WriteByte (BOT_FIGHTING, BOT_AI_FOLLOW);
+	WriteByte (BOT_FIGHTING, 30);
+	WriteCoord (BOT_FIGHTING, pos.origin_x);
+	WriteCoord (BOT_FIGHTING, pos.origin_y);
+	WriteCoord (BOT_FIGHTING, pos.origin_z);
+	WriteAngle (BOT_FIGHTING, pos.mangle_x);
+	WriteAngle (BOT_FIGHTING, pos.mangle_y);
+	WriteAngle (BOT_FIGHTING, pos.mangle_z);
+	other = find (world, classname, "player");
+	while ((other != world))
+	{
+		other.takedamage = TF_FLARE_LIT;
+		other.solid = TF_FLARE_LIT;
+		other.movetype = TF_FLARE_LIT;
+		other.modelindex = TF_FLARE_LIT;
+		other = find (other, classname, "player");
+	}
+};
+
+void () changelevel_touch =
+{
+	local entity pos;
+	local float ne;
+	local string st;
+
+	if ((other.classname != "player"))
+	{
+		return;
+	}
+	if (((cvar ("samelevel") == BOT_FIGHTING) || ((cvar ("samelevel") == BOT_AI_FOLLOW) && (mapname != "start"))))
+	{
+		return;
+	}
+	bprint (BOT_FIGHTING, other.netname);
+	bprint (BOT_FIGHTING, " exited the level\n");
+	nextmap = self.map;
+	SUB_UseTargets ();
+	if (((self.spawnflags & TF_FLARE_OFF) && (deathmatch == TF_FLARE_LIT)))
+	{
+		GotoNextMap ();
+		return;
+	}
+	self.touch = SUB_Null;
+	self.think = execute_changelevel;
+	self.nextthink = (time + 0.1);
+};
+
+void () trigger_changelevel =
+{
+	if ((CheckExistence () == TF_FLARE_LIT))
+	{
+		dremove (self);
+		return;
+	}
+	if (!self.map)
+	{
+		objerror ("changelevel trigger doesn't have map");
+	}
+	InitTrigger ();
+	self.touch = changelevel_touch;
+};
+void () set_suicide_frame;
+
+void () respawn =
+{
+	if (coop)
+	{
+		CopyToBodyQue (self);
+		setspawnparms (self);
+		PutClientInServer ();
+	}
+	else
+	{
+		if (deathmatch)
+		{
+			CopyToBodyQue (self);
+			SetNewParms ();
+			PutClientInServer ();
+		}
+		else
+		{
+			localcmd ("restart\n");
+		}
+	}
+};
+
+void () ClientKill =
+{
+	local entity te;
+
+	if ((self.classname == "botcam"))
+	{
+		return;
+	}
+	if ((self.suicide_time > time))
+	{
+		return;
+	}
+	if (self.deadflag)
+	{
+		return;
+	}
+	self.suicide_time = ((time + BOT_AI_GRAPPLE) + (random () * BOT_AI_GRAPPLE));
+	bprint (TF_FLARE_OFF, self.netname);
+	bprint (TF_FLARE_OFF, " suicides\n");
+	set_suicide_frame ();
+	self.modelindex = modelindex_player;
+	if ((self.tfstate & BOT_RESUPPLYING))
+	{
+		te = find (world, classname, "timer");
+		while (te)
+		{
+			if (((te.owner == self) && (te.think == BioInfection_Decay)))
+			{
+				logfrag (te, self);
+				te.enemy.real_frags = (te.enemy.real_frags + TF_FLARE_OFF);
+				if (!(toggleflags & 128))
+				{
+					te.enemy.frags = te.enemy.real_frags;
+				}
+			}
+			te = find (te, classname, "timer");
+		}
+	}
+	else
+	{
+		logfrag (self, self);
+	}
+	self.real_frags = (self.real_frags - TF_FLARE_OFF);
+	if (!(toggleflags & 128))
+	{
+		self.frags = self.real_frags;
+	}
+	self.weaponmodel = "";
+	self.view_ofs = '0 0 -8';
+	self.movetype = TF_FLARE_LIT;
+	TeamFortress_RemoveTimers ();
+	TeamFortress_SetupRespawn (TF_FLARE_OFF);
+	self.health = CONTENT_EMPTY;
+	self.th_die ();
+	self.deadflag = BOT_AI_FOLLOW;
+	self.tfstate = (self.tfstate | 8192);
+};
+entity lastspawn_team1;
+entity lastspawn_team2;
+entity lastspawn_team3;
+entity lastspawn_team4;
+
+entity (float team_num) FindTeamSpawnPoint =
+{
+	local entity spot;
+	local entity at_spot;
+	local float spot_found;
+	local float attempts;
+
+	if ((team_num == TF_FLARE_OFF))
+	{
+		spot = lastspawn_team1;
+		attempts = TF_FLARE_LIT;
+		while (TF_FLARE_OFF)
+		{
+			attempts = (attempts + TF_FLARE_OFF);
+			spot = find (spot, team_str_home, "ts1");
+			if ((spot == world))
+			{
+				spot = find (world, team_str_home, "ts1");
+			}
+			if ((spot == world))
+			{
+				return (world);
+			}
+			at_spot = findradius (spot.origin, 40);
+			spot_found = TF_FLARE_OFF;
+			while ((at_spot != world))
+			{
+				if (((at_spot.classname == "player") && (at_spot.deadflag == TF_FLARE_LIT)))
+				{
+					spot_found = TF_FLARE_LIT;
+				}
+				at_spot = at_spot.chain;
+			}
+			if (!Activated (spot, self))
+			{
+				spot_found = TF_FLARE_LIT;
+			}
+			if ((spot_found || (attempts >= 30)))
+			{
+				lastspawn_team1 = spot;
+				return (spot);
+			}
+		}
+	}
+	else
+	{
+		if ((team_num == BOT_FIGHTING))
+		{
+			spot = lastspawn_team2;
+			attempts = TF_FLARE_LIT;
+			while (TF_FLARE_OFF)
+			{
+				attempts = (attempts + TF_FLARE_OFF);
+				spot = find (spot, team_str_home, "ts2");
+				if ((spot == world))
+				{
+					spot = find (world, team_str_home, "ts2");
+				}
+				if ((spot == world))
+				{
+					return (world);
+				}
+				at_spot = findradius (spot.origin, 40);
+				spot_found = TF_FLARE_OFF;
+				while ((at_spot != world))
+				{
+					if (((at_spot.classname == "player") && (at_spot.deadflag == TF_FLARE_LIT)))
+					{
+						spot_found = TF_FLARE_LIT;
+					}
+					at_spot = at_spot.chain;
+				}
+				if (!Activated (spot, self))
+				{
+					spot_found = TF_FLARE_LIT;
+				}
+				if ((spot_found || (attempts >= 30)))
+				{
+					lastspawn_team2 = spot;
+					return (spot);
+				}
+			}
+		}
+		else
+		{
+			if ((team_num == BOT_AI_FOLLOW))
+			{
+				spot = lastspawn_team3;
+				attempts = TF_FLARE_LIT;
+				while (TF_FLARE_OFF)
+				{
+					attempts = (attempts + TF_FLARE_OFF);
+					spot = find (spot, team_str_home, "ts3");
+					if ((spot == world))
+					{
+						spot = find (world, team_str_home, "ts3");
+					}
+					if ((spot == world))
+					{
+						return (world);
+					}
+					at_spot = findradius (spot.origin, 40);
+					spot_found = TF_FLARE_OFF;
+					while ((at_spot != world))
+					{
+						if (((at_spot.classname == "player") && (at_spot.deadflag == TF_FLARE_LIT)))
+						{
+							spot_found = TF_FLARE_LIT;
+						}
+						at_spot = at_spot.chain;
+					}
+					if (!Activated (spot, self))
+					{
+						spot_found = TF_FLARE_LIT;
+					}
+					if ((spot_found || (attempts >= 30)))
+					{
+						lastspawn_team3 = spot;
+						return (spot);
+					}
+				}
+			}
+			else
+			{
+				if ((team_num == BOT_MOVING))
+				{
+					spot = lastspawn_team4;
+					attempts = TF_FLARE_LIT;
+					while (TF_FLARE_OFF)
+					{
+						attempts = (attempts + TF_FLARE_OFF);
+						spot = find (spot, team_str_home, "ts4");
+						if ((spot == world))
+						{
+							spot = find (world, team_str_home, "ts4");
+						}
+						if ((spot == world))
+						{
+							return (world);
+						}
+						at_spot = findradius (spot.origin, 40);
+						spot_found = TF_FLARE_OFF;
+						while ((at_spot != world))
+						{
+							if (((at_spot.classname == "player") && (at_spot.deadflag == TF_FLARE_LIT)))
+							{
+								spot_found = TF_FLARE_LIT;
+							}
+							at_spot = at_spot.chain;
+						}
+						if (!Activated (spot, self))
+						{
+							spot_found = TF_FLARE_LIT;
+						}
+						if ((spot_found || (attempts >= 30)))
+						{
+							lastspawn_team4 = spot;
+							return (spot);
+						}
+					}
+				}
+			}
+		}
+	}
+	return (world);
+};
+
+void (entity e) ValidateUser =
+{
+};
+
+entity () SelectSpawnPoint =
+{
+	local entity spot;
+	local entity at_spot;
+	local float spot_found;
+	local float attempts;
+
+	if ((self.team_no != TF_FLARE_LIT))
+	{
+		spot = FindTeamSpawnPoint (self.team_no);
+		if ((spot != world))
+		{
+			return (spot);
+		}
+	}
+	if (coop)
+	{
+		lastspawn = find (lastspawn, classname, "info_player_coop");
+		if ((lastspawn == world))
+		{
+			lastspawn = find (world, classname, "info_player_coop");
+		}
+		if ((lastspawn != world))
+		{
+			return (lastspawn);
+		}
+	}
+	else
+	{
+		if (deathmatch)
+		{
+			spot = find (lastspawn, classname, "info_player_deathmatch");
+			if ((spot == world))
+			{
+				spot = find (world, classname, "info_player_deathmatch");
+			}
+			attempts = TF_FLARE_LIT;
+			while (((spot != world) && (attempts < 100)))
+			{
+				attempts = (attempts + TF_FLARE_OFF);
+				at_spot = findradius (spot.origin, 40);
+				spot_found = TF_FLARE_OFF;
+				while (at_spot)
+				{
+					if (((at_spot.classname == "player") && (at_spot.deadflag == TF_FLARE_LIT)))
+					{
+						spot_found = TF_FLARE_LIT;
+					}
+					at_spot = at_spot.chain;
+				}
+				if ((spot_found || (attempts >= BOT_AI_SCOUT)))
+				{
+					lastspawn = spot;
+					return (spot);
+				}
+				spot = find (spot, classname, "info_player_deathmatch");
+				if ((spot == world))
+				{
+					spot = find (world, classname, "info_player_deathmatch");
+				}
+			}
+		}
+	}
+	if (serverflags)
+	{
+		spot = find (world, classname, "info_player_start2");
+		if (spot)
+		{
+			return (spot);
+		}
+	}
+	spot = find (world, classname, "info_player_start");
+	if (!spot)
+	{
+		error ("PutClientInServer: no info_player_start on level\n");
+	}
+	return (spot);
+};
+void () PlayerDie;
+void () TeamFortress_SetHealth;
+void () TeamFortress_SetEquipment;
+void () player_touch;
+
+void () PutClientInServer =
+{
+	local string st;
+	local float iszoom;
+	local float oldclass;
+	local entity spot;
+	local entity te;
+
+	self.touch = player_touch;
+	self.classname = "player";
+	self.health = 100;
+	self.takedamage = BOT_FIGHTING;
+	self.solid = BOT_AI_FOLLOW;
+	self.movetype = BOT_AI_FOLLOW;
+	self.show_hostile = TF_FLARE_LIT;
+	self.FlashTime = TF_FLARE_LIT;
+	self.max_health = 100;
+	self.flags = BOT_DEFEND;
+	self.air_finished = (time + 12);
+	self.dmg = BOT_FIGHTING;
+	self.super_damage_finished = TF_FLARE_LIT;
+	self.radsuit_finished = TF_FLARE_LIT;
+	self.invisible_finished = TF_FLARE_LIT;
+	self.invincible_finished = TF_FLARE_LIT;
+	self.effects = TF_FLARE_LIT;
+	self.invincible_time = TF_FLARE_LIT;
+	self.reload_shotgun = TF_FLARE_LIT;
+	self.reload_super_shotgun = TF_FLARE_LIT;
+	self.reload_grenade_launcher = TF_FLARE_LIT;
+	self.reload_rocket_launcher = TF_FLARE_LIT;
+	self.immune_to_check = (time + BOT_AI_GRAPPLE);
+	self.on_hook = TF_FLARE_LIT;
+	self.hook_out = TF_FLARE_LIT;
+	self.fire_held_down = TF_FLARE_LIT;
+	DecodeLevelParms ();
+	if ((self.playerclass == TF_FLARE_LIT))
+	{
+		if (TeamFortress_TeamIsCivilian (self.team_no))
+		{
+			self.impulse = TF_FLARE_OFF;
+			TeamFortress_ChangeClass ();
+		}
+	}
+	if (((deathmatch == BOT_AI_FOLLOW) && (self.nextpc != TF_FLARE_LIT)))
+	{
+		self.playerclass = self.nextpc;
+		if ((self.nextpc == BOT_AI_SCOUT))
+		{
+			self.tfstate = (self.tfstate | BOT_DEFEND);
+		}
+		else
+		{
+			self.tfstate = (self.tfstate - (self.tfstate & BOT_DEFEND));
+		}
+	}
+	iszoom = TF_FLARE_LIT;
+	if ((self.tfstate & 4096))
+	{
+		iszoom = TF_FLARE_OFF;
+	}
+	if ((self.tfstate & BOT_DEFEND))
+	{
+		oldclass = self.playerclass;
+		self.playerclass = (TF_FLARE_OFF + floor ((random () * (BOT_AI_SCOUT - TF_FLARE_OFF))));
+		while ((!IsLegalClass (self.playerclass) || (self.playerclass == oldclass)))
+		{
+			self.playerclass = (TF_FLARE_OFF + floor ((random () * (BOT_AI_SCOUT - TF_FLARE_OFF))));
+		}
+		self.tfstate = BOT_DEFEND;
+	}
+	else
+	{
+		self.tfstate = TF_FLARE_LIT;
+	}
+	if ((iszoom == TF_FLARE_OFF))
+	{
+		self.tfstate = (self.tfstate | 4096);
+	}
+	if ((self.playerclass != BOT_AI_FLAGRUN))
+	{
+		te = find (world, classname, "building_dispenser");
+		while (te)
+		{
+			if ((te.real_owner == self))
+			{
+				TF_T_Damage (te, world, world, 500, TF_FLARE_LIT, TF_FLARE_LIT);
+			}
+			te = find (te, classname, "building_dispenser");
+		}
+		te = find (world, classname, "building_sentrygun");
+		while (te)
+		{
+			if ((te.real_owner == self))
+			{
+				TF_T_Damage (te, world, world, 500, TF_FLARE_LIT, TF_FLARE_LIT);
+			}
+			te = find (te, classname, "building_sentrygun");
+		}
+	}
+	TeamFortress_PrintClassName (self, self.playerclass, (self.tfstate & BOT_DEFEND));
+	TeamFortress_SetEquipment ();
+	TeamFortress_SetHealth ();
+	TeamFortress_SetSpeed (self);
+	TeamFortress_SetSkin (self);
+	stuffcmd (self, "v_idlescale 0\n");
+	stuffcmd (self, "v_cshift 0 0 0 0\n");
+	SetTeamName (self);
+	W_SetCurrentAmmo ();
+	self.attack_finished = (time + 0.3);
+	self.th_pain = player_pain;
+	self.th_die = PlayerDie;
+	if ((self.height != TF_FLARE_LIT))
+	{
+		self.height = TF_FLARE_LIT;
+		TF_zoom (90);
+	}
+	self.deadflag = TF_FLARE_LIT;
+	self.pausetime = TF_FLARE_LIT;
+	spot = SelectSpawnPoint ();
+	if ((self.playerclass != TF_FLARE_LIT))
+	{
+		spawn_tdeath (spot.origin, self);
+	}
+	self.observer_list = spot;
+	self.origin = (spot.origin + '0 0 1');
+	self.angles = spot.angles;
+	self.fixangle = TF_FLARE_OFF;
+	if ((spot.classname == "info_player_teamspawn"))
+	{
+		if ((spot.items != TF_FLARE_LIT))
+		{
+			te = Finditem (spot.items);
+			if (te)
+			{
+				tfgoalitem_GiveToPlayer (te, self, self);
+			}
+			if (!(spot.goal_activation & TF_FLARE_OFF))
+			{
+				spot.items = TF_FLARE_LIT;
+			}
+		}
+		if (spot.message)
+		{
+			CenterPrint (self, spot.message);
+			if (!(spot.goal_activation & BOT_FIGHTING))
+			{
+				spot.message = string_null;
+			}
+		}
+		if ((spot.activate_goal_no != TF_FLARE_LIT))
+		{
+			te = Findgoal (spot.activate_goal_no);
+			if (te)
+			{
+				AttemptToActivate (te, self, spot);
+			}
+		}
+		if ((spot.goal_effects == TF_FLARE_OFF))
+		{
+			spot.classname = "deadpoint";
+			spot.team_str_home = string_null;
+			spot.nextthink = (time + TF_FLARE_OFF);
+			spot.think = SUB_Remove;
+		}
+	}
+	setmodel (self, string_null);
+	modelindex_null = self.modelindex;
+	setmodel (self, "progs/eyes.mdl");
+	modelindex_eyes = self.modelindex;
+	setmodel (self, "progs/player.mdl");
+	modelindex_player = self.modelindex;
+	if ((self.playerclass == TF_FLARE_LIT))
+	{
+		self.modelindex = modelindex_null;
+		self.current_menu = TF_FLARE_OFF;
+	}
+	setsize (self, VEC_HULL_MIN, VEC_HULL_MAX);
+	self.view_ofs = '0 0 22';
+	player_stand1 ();
+	if ((deathmatch || coop))
+	{
+		makevectors (self.angles);
+		if ((self.playerclass != TF_FLARE_LIT))
+		{
+			spawn_tfog ((self.origin + (v_forward * 20)));
+		}
+	}
+	if ((stof (infokey (world, "rj")) != TF_FLARE_LIT))
+	{
+		rj = stof (infokey (world, "rj"));
+	}
+	else
+	{
+		rj = TF_FLARE_OFF;
+	}
+};
+
+void () info_player_start =
+{
+	if ((CheckExistence () == TF_FLARE_LIT))
+	{
+		dremove (self);
+		return;
+	}
+};
+
+void () info_player_start2 =
+{
+	if ((CheckExistence () == TF_FLARE_LIT))
+	{
+		dremove (self);
+		return;
+	}
+};
+
+void () testplayerstart =
+{
+	if ((CheckExistence () == TF_FLARE_LIT))
+	{
+		dremove (self);
+		return;
+	}
+};
+
+void () info_player_deathmatch =
+{
+	if ((CheckExistence () == TF_FLARE_LIT))
+	{
+		dremove (self);
+		return;
+	}
+};
+
+void () info_player_coop =
+{
+	if ((CheckExistence () == TF_FLARE_LIT))
+	{
+		dremove (self);
+		return;
+	}
+};
+
+void (entity c) PrintClientScore =
+{
+	if (((c.frags > -10) && (c.frags < TF_FLARE_LIT)))
+	{
+		bprint (TF_FLARE_OFF, " ");
+	}
+	else
+	{
+		if ((c.frags >= TF_FLARE_LIT))
+		{
+			if ((c.frags < 100))
+			{
+				bprint (TF_FLARE_OFF, " ");
+			}
+			if ((c.frags < BOT_AI_SCOUT))
+			{
+				bprint (TF_FLARE_OFF, " ");
+			}
+		}
+	}
+	bprint (c.frags, ftos (c.frags));
+	bprint (TF_FLARE_OFF, " ");
+	bprint (TF_FLARE_OFF, c.netname);
+	bprint (TF_FLARE_OFF, "\n");
+};
+
+void () DumpScore =
+{
+	local entity e;
+	local entity sort;
+	local entity walk;
+
+	if (world.chain)
+	{
+		error ("DumpScore: world.chain is set");
+	}
+	e = find (world, classname, "player");
+	sort = world;
+	while (e)
+	{
+		if (!sort)
+		{
+			sort = e;
+			e.chain = world;
+		}
+		else
+		{
+			if ((e.frags > sort.frags))
+			{
+				e.chain = sort;
+				sort = e;
+			}
+			else
+			{
+				walk = sort;
+				do
+				{
+					if (!walk.chain)
+					{
+						e.chain = world;
+						walk.chain = e;
+					}
+					else
+					{
+						if ((walk.chain.frags < e.frags))
+						{
+							e.chain = walk.chain;
+							walk.chain = e;
+						}
+						else
+						{
+							walk = walk.chain;
+						}
+					}
+
+				} while ((walk.chain != e));
+			}
+		}
+		e = find (e, classname, "player");
+	}
+	bprint (TF_FLARE_OFF, "\n");
+	while (sort)
+	{
+		PrintClientScore (sort);
+		sort = sort.chain;
+	}
+	bprint (TF_FLARE_OFF, "\n");
+};
+float already_cycled;
+
+void () NextLevel =
+{
+	local entity o;
+	local string st;
+
+	if (already_cycled)
+	{
+		return;
+	}
+	already_cycled = TF_FLARE_OFF;
+	o = spawn ();
+	o.map = nextmap;
+	o.think = execute_changelevel;
+	o.nextthink = (time + 0.1);
+};
+
+void () CheckRules =
+{
+	if ((timelimit && (time >= timelimit)))
+	{
+		NextLevel ();
+	}
+	else
+	{
+		if ((fraglimit && (self.frags >= fraglimit)))
+		{
+			NextLevel ();
+		}
+	}
+};
+
+void () PlayerDeathThink =
+{
+	local entity old_self;
+	local float forward;
+
+	if ((self.flags & FL_ONGROUND))
+	{
+		forward = vlen (self.velocity);
+		forward = (forward - 20);
+		if ((forward <= TF_FLARE_LIT))
+		{
+			self.velocity = '0 0 0';
+		}
+		else
+		{
+			self.velocity = (forward * normalize (self.velocity));
+		}
+	}
+	if ((self.deadflag == BOT_FIGHTING))
+	{
+		if (((self.button2 || self.button1) || self.button0))
+		{
+			return;
+		}
+		self.deadflag = BOT_AI_FOLLOW;
+		self.tfstate = (self.tfstate - (self.tfstate & 8192));
+		return;
+	}
+	if (((!self.button2 && !self.button1) && !self.button0))
+	{
+		if ((self.tfstate & 8192))
+		{
+			if ((self.respawn_time <= time))
+			{
+				self.button0 = TF_FLARE_LIT;
+				self.button1 = TF_FLARE_LIT;
+				self.button2 = TF_FLARE_LIT;
+				respawn ();
+			}
+		}
+		return;
+	}
+	else
+	{
+		self.tfstate = (self.tfstate | 8192);
+		if ((self.respawn_time <= time))
+		{
+			self.button0 = TF_FLARE_LIT;
+			self.button1 = TF_FLARE_LIT;
+			self.button2 = TF_FLARE_LIT;
+			respawn ();
+		}
+		return;
+	}
+};
+
+void () PlayerJump =
+{
+	local vector start;
+	local vector end;
+
+	if ((self.flags & FL_WATERJUMP))
+	{
+		return;
+	}
+	if ((self.waterlevel >= BOT_FIGHTING))
+	{
+		if ((self.watertype == CONTENT_WATER))
+		{
+			self.velocity_z = 100;
+		}
+		else
+		{
+			if ((self.watertype == -4))
+			{
+				self.velocity_z = 80;
+			}
+			else
+			{
+				self.velocity_z = 50;
+			}
+		}
+		if ((self.swim_flag < time))
+		{
+			self.swim_flag = (time + TF_FLARE_OFF);
+			if ((random () < 0.5))
+			{
+				sound (self, BOT_MOVING, "misc/water1.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+			}
+			else
+			{
+				sound (self, BOT_MOVING, "misc/water2.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+			}
+		}
+		return;
+	}
+	if (!(self.flags & FL_ONGROUND))
+	{
+		return;
+	}
+	if (!(self.flags & 4096))
+	{
+		return;
+	}
+	self.flags = (self.flags - (self.flags & 4096));
+	self.button2 = TF_FLARE_LIT;
+	sound (self, BOT_MOVING, "player/plyrjmp8.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+	if (!self.ishuman)
+	{
+		self.velocity_z = (self.velocity_z + 270);
+	}
+};
+.float dmgtime;
+
+void () WaterMove =
+{
+	if ((self.movetype == BOT_DEFEND))
+	{
+		return;
+	}
+	if ((self.health < TF_FLARE_LIT))
+	{
+		return;
+	}
+	if ((self.waterlevel != BOT_AI_FOLLOW))
+	{
+		if ((self.air_finished < time))
+		{
+			sound (self, BOT_FIGHTING, "player/gasp2.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+		}
+		else
+		{
+			if ((self.air_finished < (time + BOT_AI_FLAGRUN)))
+			{
+				sound (self, BOT_FIGHTING, "player/gasp1.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+			}
+		}
+		self.air_finished = (time + 12);
+		self.dmg = BOT_FIGHTING;
+	}
+	else
+	{
+		if ((self.air_finished < time))
+		{
+			if ((self.pain_finished < time))
+			{
+				self.dmg = (self.dmg + BOT_FIGHTING);
+				if ((self.dmg > 15))
+				{
+					self.dmg = BOT_AI_SCOUT;
+				}
+				TF_T_Damage (self, world, world, self.dmg, TF_FLARE_OFF, TF_FLARE_LIT);
+				self.pain_finished = (time + TF_FLARE_OFF);
+			}
+		}
+	}
+	if (!self.waterlevel)
+	{
+		if ((self.flags & BOT_RESUPPLYING))
+		{
+			sound (self, BOT_MOVING, "misc/outwater.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+			self.flags = (self.flags - BOT_RESUPPLYING);
+		}
+		return;
+	}
+	if ((self.watertype == CONTENT_LAVA))
+	{
+		if ((self.dmgtime < time))
+		{
+			if ((self.radsuit_finished > time))
+			{
+				self.dmgtime = (time + TF_FLARE_OFF);
+			}
+			else
+			{
+				self.dmgtime = (time + 0.2);
+			}
+			TF_T_Damage (self, world, world, (BOT_AI_SCOUT * self.waterlevel), TF_FLARE_LIT, BOT_RESUPPLYING);
+		}
+	}
+	else
+	{
+		if ((self.watertype == -4))
+		{
+			if (((self.dmgtime < time) && (self.radsuit_finished < time)))
+			{
+				self.dmgtime = (time + TF_FLARE_OFF);
+				T_Damage (self, world, world, (BOT_MOVING * self.waterlevel));
+			}
+		}
+	}
+	if (!(self.flags & BOT_RESUPPLYING))
+	{
+		if ((self.watertype == CONTENT_LAVA))
+		{
+			sound (self, BOT_MOVING, "player/inlava.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+		}
+		if ((self.watertype == CONTENT_WATER))
+		{
+			sound (self, BOT_MOVING, "player/inh2o.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+		}
+		if ((self.watertype == -4))
+		{
+			sound (self, BOT_MOVING, "player/slimbrn2.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+		}
+		self.flags = (self.flags + BOT_RESUPPLYING);
+		self.dmgtime = TF_FLARE_LIT;
+	}
+};
+
+void () CheckWaterJump =
+{
+	local vector start;
+	local vector end;
+
+	makevectors (self.angles);
+	start = self.origin;
+	start_z = (start_z + BOT_DEFEND);
+	v_forward_z = TF_FLARE_LIT;
+	normalize (v_forward);
+	end = (start + (v_forward * 24));
+	traceline (start, end, TF_FLARE_OFF, self);
+	if ((trace_fraction < TF_FLARE_OFF))
+	{
+		start_z = ((start_z + self.maxs_z) - BOT_DEFEND);
+		end = (start + (v_forward * 24));
+		self.movedir = (trace_plane_normal * -50);
+		traceline (start, end, TF_FLARE_OFF, self);
+		if ((trace_fraction == TF_FLARE_OFF))
+		{
+			self.flags = (self.flags | FL_WATERJUMP);
+			self.velocity_z = 225;
+			self.flags = (self.flags - (self.flags & 4096));
+			self.teleport_time = (time + BOT_FIGHTING);
+			return;
+		}
+	}
+};
+
+void () PlayerPreThink =
+{
+	local float mspeed;
+	local float aspeed;
+	local float r;
+	local vector src;
+
+	if (BotPreFrame ())
+	{
+		return;
+	}
+	if ((self.is_feigning && (self.waterlevel == TF_FLARE_OFF)))
+	{
+		self.watertype = CONTENT_WATER;
+		self.waterlevel = BOT_AI_FOLLOW;
+	}
+	if ((self.cheat_level > TF_FLARE_LIT))
+	{
+		self.cheat_level = (self.cheat_level - TF_FLARE_OFF);
+	}
+	if (intermission_running)
+	{
+		IntermissionThink ();
+		return;
+	}
+	makevectors (self.v_angle);
+	if ((self.playerclass == TF_FLARE_LIT))
+	{
+		if (self.button0)
+		{
+			self.velocity = (normalize (v_forward) * 300);
+		}
+		if (((self.button2 && (self.current_menu == BOT_FIGHTING)) && (self.team_no == TF_FLARE_LIT)))
+		{
+			if (TeamFortress_TeamPutPlayerInTeam ())
+			{
+				self.current_menu = BOT_AI_FOLLOW;
+				self.menu_count = 25;
+			}
+		}
+	}
+	if ((self.view_ofs == '0 0 0'))
+	{
+		return;
+	}
+	CheckRules ();
+	if ((self.playerclass != TF_FLARE_LIT))
+	{
+		WaterMove ();
+	}
+	if ((self.deadflag >= BOT_FIGHTING))
+	{
+		PlayerDeathThink ();
+		return;
+	}
+	if (((self.undercover_team || self.undercover_skin) || self.is_undercover))
+	{
+		if ((self.effects & (BOT_DEFEND | BOT_MOVING)))
+		{
+			sprint (self, TF_FLARE_OFF, "The glowing removes your disguise.\n");
+			Spy_RemoveDisguise (self);
+		}
+	}
+	if ((self.deadflag == TF_FLARE_OFF))
+	{
+		return;
+	}
+	if (!self.is_feigning)
+	{
+		if (self.button2)
+		{
+			PlayerJump ();
+		}
+		else
+		{
+			self.flags = (self.flags | 4096);
+		}
+	}
+	else
+	{
+		if (self.waterlevel)
+		{
+			self.velocity_z = -100;
+		}
+	}
+	if ((time < self.pausetime))
+	{
+		self.velocity = '0 0 0';
+	}
+	if ((((time > self.attack_finished) && (self.currentammo == TF_FLARE_LIT)) && (self.weapon > BOT_RESUPPLYING)))
+	{
+		self.weapon = W_BestWeapon ();
+		W_SetCurrentAmmo ();
+	}
+	if (self.on_hook)
+	{
+		Service_Grapple ();
+	}
+};
+
+void () CheckPowerups =
+{
+	local float lighton;
+	local entity te;
+
+	if ((self.health <= TF_FLARE_LIT))
+	{
+		return;
+	}
+	if ((self.playerclass == TF_FLARE_LIT))
+	{
+		self.modelindex = modelindex_null;
+	}
+	else
+	{
+		if (((self.is_undercover == TF_FLARE_OFF) && (invis_only == TF_FLARE_OFF)))
+		{
+			self.frame = TF_FLARE_LIT;
+			self.modelindex = modelindex_eyes;
+		}
+		else
+		{
+			if (self.invisible_finished)
+			{
+				if ((self.tfstate & 64))
+				{
+					if ((self.invisible_finished < (time + BOT_AI_SCOUT)))
+					{
+						self.invisible_finished = (time + 666);
+					}
+				}
+				if ((self.invisible_sound < time))
+				{
+					sound (self, TF_FLARE_LIT, "items/inv3.wav", 0.5, BOT_FIGHTING);
+					self.invisible_sound = (time + ((random () * BOT_AI_FOLLOW) + TF_FLARE_OFF));
+				}
+				if ((self.invisible_finished < (time + BOT_AI_FOLLOW)))
+				{
+					if ((self.invisible_time == TF_FLARE_OFF))
+					{
+						sprint (self, BOT_FIGHTING, "Ring of Shadows magic is fading\n");
+						stuffcmd (self, "bf\n");
+						sound (self, TF_FLARE_LIT, "items/inv2.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+						self.invisible_time = (time + TF_FLARE_OFF);
+					}
+					if ((self.invisible_time < time))
+					{
+						self.invisible_time = (time + TF_FLARE_OFF);
+						stuffcmd (self, "bf\n");
+					}
+				}
+				if ((self.invisible_finished < time))
+				{
+					self.items = (self.items - IT_INVISIBILITY);
+					self.invisible_finished = TF_FLARE_LIT;
+					self.invisible_time = TF_FLARE_LIT;
+				}
+				self.frame = TF_FLARE_LIT;
+				self.modelindex = modelindex_eyes;
+			}
+			else
+			{
+				self.modelindex = modelindex_player;
+			}
+		}
+	}
+	if (self.invincible_finished)
+	{
+		if ((self.tfstate & BOT_AVOIDING_HAZARD))
+		{
+			if ((self.invincible_finished < (time + BOT_AI_SCOUT)))
+			{
+				self.invincible_finished = (time + 666);
+			}
+		}
+		if ((self.invincible_finished < (time + BOT_AI_FOLLOW)))
+		{
+			if ((self.invincible_time == TF_FLARE_OFF))
+			{
+				sprint (self, BOT_FIGHTING, "Protection is almost burned out\n");
+				stuffcmd (self, "bf\n");
+				sound (self, TF_FLARE_LIT, "items/protect2.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+				self.invincible_time = (time + TF_FLARE_OFF);
+			}
+			if ((self.invincible_time < time))
+			{
+				self.invincible_time = (time + TF_FLARE_OFF);
+				stuffcmd (self, "bf\n");
+			}
+		}
+		if ((self.invincible_finished < time))
+		{
+			self.items = (self.items - 1048576);
+			self.invincible_time = TF_FLARE_LIT;
+			self.invincible_finished = TF_FLARE_LIT;
+		}
+		if ((self.invincible_finished > time))
+		{
+			self.effects = (self.effects | BOT_DEFEND);
+		}
+		else
+		{
+			lighton = TF_FLARE_LIT;
+			te = find (world, classname, "item_tfgoal");
+			while (te)
+			{
+				if ((te.owner == self))
+				{
+					if ((te.goal_activation & TF_FLARE_OFF))
+					{
+						lighton = TF_FLARE_OFF;
+					}
+				}
+				te = find (te, classname, "item_tfgoal");
+			}
+			if (!lighton)
+			{
+				self.effects = (self.effects - (self.effects & BOT_DEFEND));
+			}
+		}
+	}
+	if (self.super_damage_finished)
+	{
+		if ((self.tfstate & 128))
+		{
+			if ((self.super_damage_finished == (time + BOT_AI_SCOUT)))
+			{
+				self.super_damage_finished = (time + 666);
+			}
+		}
+		if ((self.super_damage_finished < (time + BOT_AI_FOLLOW)))
+		{
+			if ((self.super_time == TF_FLARE_OFF))
+			{
+				sprint (self, BOT_FIGHTING, "Quad Damage is wearing off\n");
+				stuffcmd (self, "bf\n");
+				sound (self, TF_FLARE_LIT, "items/damage2.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+				self.super_time = (time + TF_FLARE_OFF);
+			}
+			if ((self.super_time < time))
+			{
+				self.super_time = (time + TF_FLARE_OFF);
+				stuffcmd (self, "bf\n");
+			}
+		}
+		if ((self.super_damage_finished < time))
+		{
+			self.items = (self.items - 4194304);
+			self.super_damage_finished = TF_FLARE_LIT;
+			self.super_time = TF_FLARE_LIT;
+		}
+		if ((self.super_damage_finished > time))
+		{
+			self.effects = (self.effects | BOT_DEFEND);
+		}
+		else
+		{
+			lighton = TF_FLARE_LIT;
+			te = find (world, classname, "item_tfgoal");
+			while (te)
+			{
+				if ((te.owner == self))
+				{
+					if ((te.goal_activation & TF_FLARE_OFF))
+					{
+						lighton = TF_FLARE_OFF;
+					}
+				}
+				te = find (te, classname, "item_tfgoal");
+			}
+			if (!lighton)
+			{
+				self.effects = (self.effects - (self.effects & BOT_DEFEND));
+			}
+		}
+	}
+	if (self.radsuit_finished)
+	{
+		self.air_finished = (time + 12);
+		if ((self.tfstate & FL_ITEM))
+		{
+			if ((self.radsuit_finished == (time + BOT_AI_SCOUT)))
+			{
+				self.radsuit_finished = (time + 666);
+			}
+		}
+		if ((self.radsuit_finished < (time + BOT_AI_FOLLOW)))
+		{
+			if ((self.rad_time == TF_FLARE_OFF))
+			{
+				sprint (self, BOT_FIGHTING, "Air supply in Biosuit expiring\n");
+				stuffcmd (self, "bf\n");
+				sound (self, TF_FLARE_LIT, "items/suit2.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+				self.rad_time = (time + TF_FLARE_OFF);
+			}
+			if ((self.rad_time < time))
+			{
+				self.rad_time = (time + TF_FLARE_OFF);
+				stuffcmd (self, "bf\n");
+			}
+		}
+		if ((self.radsuit_finished < time))
+		{
+			self.items = (self.items - 2097152);
+			self.rad_time = TF_FLARE_LIT;
+			self.radsuit_finished = TF_FLARE_LIT;
+		}
+	}
+};
+
+void () PlayerPostThink =
+{
+	local float mspeed;
+	local float aspeed;
+	local float r;
+
+	if (BotPostFrame ())
+	{
+		return;
+	}
+	if ((self.view_ofs == '0 0 0'))
+	{
+		return;
+	}
+	if (self.deadflag)
+	{
+		DeadImpulses ();
+		self.impulse = TF_FLARE_LIT;
+		return;
+	}
+	if ((((self.jump_flag < -300) && (self.flags & FL_ONGROUND)) && (self.health > TF_FLARE_LIT)))
+	{
+		if ((self.watertype == CONTENT_WATER))
+		{
+			sound (self, BOT_MOVING, "player/h2ojump.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+		}
+		else
+		{
+			if ((self.jump_flag < -650))
+			{
+				T_Damage (self, world, world, BOT_AI_GRAPPLE);
+				sound (self, BOT_FIGHTING, "player/land2.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+				self.deathtype = "falling";
+			}
+			else
+			{
+				sound (self, BOT_FIGHTING, "player/land.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+			}
+		}
+	}
+	self.jump_flag = self.velocity_z;
+	CheckPowerups ();
+	W_WeaponFrame ();
+	if ((self.motd < 22))
+	{
+		TeamFortress_MOTD ();
+	}
+	else
+	{
+		if ((self.cheat_check == TF_FLARE_LIT))
+		{
+			self.cheat_check = (time + BOT_AI_GRAPPLE);
+		}
+		else
+		{
+			if (((time > self.StatusRefreshTime) && (self.StatusBarSize != TF_FLARE_LIT)))
+			{
+				RefreshStatusBar (self);
+			}
+		}
+	}
+	if ((self.cheat_check <= time))
+	{
+		TeamFortress_CheckTeamCheats ();
+		self.cheat_check = (time + BOT_AI_FOLLOW);
+	}
+};
+
+void () ClientConnect =
+{
+	local string st;
+
+	ClientInRankings ();
+	bprint (BOT_FIGHTING, self.netname);
+	bprint (BOT_FIGHTING, " entered the game\n");
+	if ((TF_FLARE_LIT == TF_FLARE_LIT))
+	{
+		self.tfstate = (self.tfstate | 4096);
+	}
+	self.motd = TF_FLARE_LIT;
+	self.got_aliases = TF_FLARE_LIT;
+	st = infokey (self, "sbar_res");
+	if ((st == "768"))
+	{
+		self.StatusBarRes = BOT_DEFEND;
+	}
+	else
+	{
+		if ((st == "600"))
+		{
+			self.StatusBarRes = BOT_AI_BLAST;
+		}
+		else
+		{
+			if ((st == "480"))
+			{
+				self.StatusBarRes = BOT_AI_FLEE;
+			}
+			else
+			{
+				if ((st == "400"))
+				{
+					self.StatusBarRes = BOT_AI_GRAPPLE;
+				}
+				else
+				{
+					if ((st == "384"))
+					{
+						self.StatusBarRes = BOT_MOVING;
+					}
+					else
+					{
+						if ((st == "350"))
+						{
+							self.StatusBarRes = BOT_AI_FOLLOW;
+						}
+						else
+						{
+							if ((st == "300"))
+							{
+								self.StatusBarRes = BOT_FIGHTING;
+							}
+							else
+							{
+								if ((st == "240"))
+								{
+									self.StatusBarRes = TF_FLARE_OFF;
+								}
+								else
+								{
+									self.StatusBarRes = TF_FLARE_LIT;
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	st = infokey (self, "sbar_size");
+	self.StatusBarSize = stof (st);
+	if (((self.StatusBarSize > BOT_FIGHTING) || (self.StatusBarSize < TF_FLARE_LIT)))
+	{
+		self.StatusBarSize = TF_FLARE_LIT;
+	}
+	self.has_disconnected = TF_FLARE_LIT;
+	if (intermission_running)
+	{
+		GotoNextMap ();
+	}
+};
+
+void () ClientDisconnect =
+{
+	local entity te;
+
+	if (self.ishuman)
+	{
+		clientSetFree (self.fClientNo);
+	}
+	bprint (BOT_FIGHTING, self.netname);
+	bprint (BOT_FIGHTING, " left the game with ");
+	bprint (self.frags, ftos (self.frags));
+	bprint (BOT_FIGHTING, " frags\n");
+	sound (self, BOT_MOVING, "player/tornoff2.wav", TF_FLARE_OFF, TF_FLARE_LIT);
+	self.has_disconnected = TF_FLARE_OFF;
+	TeamFortress_RemoveTimers ();
+	te = find (world, classname, "building_dispenser");
+	while (te)
+	{
+		if ((te.real_owner == self))
+		{
+			TF_T_Damage (te, world, world, 500, TF_FLARE_LIT, TF_FLARE_LIT);
+		}
+		te = find (te, classname, "building_dispenser");
+	}
+	te = find (world, classname, "building_sentrygun");
+	while (te)
+	{
+		if ((te.real_owner == self))
+		{
+			TF_T_Damage (te, world, world, 500, TF_FLARE_LIT, TF_FLARE_LIT);
+		}
+		te = find (te, classname, "building_sentrygun");
+	}
+	te = find (world, classname, "detpack");
+	while (te)
+	{
+		if ((te.owner == self))
+		{
+			if ((te.weaponmode == TF_FLARE_OFF))
+			{
+				TeamFortress_SetSpeed (te.enemy);
+				dremove (te.oldenemy);
+				dremove (te.observer_list);
+			}
+			dremove (te);
+			te = world;
+		}
+		te = find (te, classname, "detpack");
+	}
+	set_suicide_frame ();
+	self.netname = string_null;
+	self.team_no = TF_FLARE_LIT;
+	self.solid = TF_FLARE_LIT;
+	setsize (self, '0 0 0', '0 0 0');
+};
+
+void (entity targ, entity attacker) ClientObituary =
+{
+	local float rnum;
+	local string deathstring;
+	local string deathstring2;
+	local float attackerteam;
+	local float targteam;
+	local entity te;
+
+	rnum = random ();
+	if ((targ.classname == "player"))
+	{
+		if ((attacker.classname == "teledeath"))
+		{
+			bprint (TF_FLARE_OFF, targ.netname);
+			bprint (TF_FLARE_OFF, " was telefragged by ");
+			bprint (TF_FLARE_OFF, attacker.owner.netname);
+			bprint (TF_FLARE_OFF, "\n");
+			if (((attacker.owner.team_no != targ.team_no) || (attacker.owner.team_no < TF_FLARE_OFF)))
+			{
+				attacker.owner.real_frags = (attacker.owner.real_frags + TF_FLARE_OFF);
+			}
+			if (!(toggleflags & 128))
+			{
+				attacker.owner.frags = attacker.owner.real_frags;
+			}
+			return;
+		}
+		if ((attacker.classname == "teledeath2"))
+		{
+			bprint (TF_FLARE_OFF, "Satan's power deflects ");
+			bprint (TF_FLARE_OFF, targ.netname);
+			bprint (TF_FLARE_OFF, "'s telefrag\n");
+			targ.real_frags = (targ.real_frags - TF_FLARE_OFF);
+			if (!(toggleflags & 128))
+			{
+				targ.frags = targ.real_frags;
+			}
+			logfrag (targ, targ);
+			return;
+		}
+		if ((attacker.classname == "info_tfgoal"))
+		{
+			if ((attacker.deathtype != ""))
+			{
+				bprint (TF_FLARE_OFF, targ.netname);
+				bprint (TF_FLARE_OFF, attacker.deathtype);
+			}
+			logfrag (targ, targ);
+			return;
+		}
+		if (((attacker.classname == "player") || (attacker.classname == "bot")))
+		{
+			if ((targ == attacker))
+			{
+				attacker.real_frags = (attacker.real_frags - TF_FLARE_OFF);
+				if (!(toggleflags & 128))
+				{
+					attacker.frags = attacker.real_frags;
+				}
+				bprint (TF_FLARE_OFF, targ.netname);
+				if ((deathmsg == BOT_DEFEND))
+				{
+					deathstring = " grenades himself\n";
+				}
+				else
+				{
+					if ((deathmsg == BOT_AI_FLAGRUN))
+					{
+						deathstring = " hammers himself\n";
+					}
+					else
+					{
+						if ((deathmsg == BOT_AI_SCOUT))
+						{
+							deathstring = " goes to pieces\n";
+						}
+						else
+						{
+							if ((deathmsg == 11))
+							{
+								deathstring = " ambushes himself with his own pipebombs\n";
+							}
+							else
+							{
+								if ((deathmsg == 24))
+								{
+									deathstring = " chokes on his own gas\n";
+								}
+								else
+								{
+									if ((deathmsg == 30))
+									{
+										deathstring = " explodes his ammo and body\n";
+									}
+									else
+									{
+										if ((deathmsg == 35))
+										{
+											deathstring = " is charred by his own flash grenade\n";
+										}
+										else
+										{
+											if ((deathmsg == 31))
+											{
+												deathstring = " detonates an ammo box too close to him\n";
+											}
+											else
+											{
+												if ((deathmsg == 12))
+												{
+													deathstring = " set the detpack and forgot to run\n";
+												}
+												else
+												{
+													if ((deathmsg == 13))
+													{
+														deathstring = " died impossibly!\n";
+													}
+													else
+													{
+														if ((deathmsg == BOT_AI_FLEE))
+														{
+															if (rnum)
+															{
+																deathstring = " becomes bored with life\n";
+															}
+															else
+															{
+																deathstring = " checks if his weapon is loaded\n";
+															}
+														}
+														else
+														{
+															if ((deathmsg == 33))
+															{
+																deathstring = " chars himself with an incendiary rocket\n";
+															}
+															else
+															{
+																if ((deathmsg == BOT_AI_GRAPPLE))
+																{
+																	deathstring = " tries to put the pin back in\n";
+																}
+																else
+																{
+																	if ((deathmsg == 15))
+																	{
+																		deathstring = " torches himself\n";
+																	}
+																	else
+																	{
+																		if (((deathmsg == BOT_AI_BLAST) && (targ.waterlevel > TF_FLARE_OFF)))
+																		{
+																			bprint (TF_FLARE_OFF, " discharges into the water.\n");
+																			return;
+																		}
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+				bprint (TF_FLARE_OFF, deathstring);
+				return;
+			}
+			else
+			{
+				if (((teamplay && (attacker.team_no == targ.team_no)) && (attacker.team_no > TF_FLARE_LIT)))
+				{
+					if (((attacker.team_no > TF_FLARE_LIT) && (attacker.team_no == targ.team_no)))
+					{
+						attacker.real_frags = (attacker.real_frags - TF_FLARE_OFF);
+					}
+					else
+					{
+						attacker.real_frags = (attacker.real_frags + TF_FLARE_OFF);
+					}
+					if (!(toggleflags & 128))
+					{
+						attacker.frags = attacker.real_frags;
+					}
+					if ((rnum < 0.25))
+					{
+						deathstring = " mows down a teammate\n";
+					}
+					else
+					{
+						if ((rnum < 0.5))
+						{
+							deathstring = " checks his glasses\n";
+						}
+						else
+						{
+							if ((rnum < 0.75))
+							{
+								deathstring = " gets a frag for the other team\n";
+							}
+							else
+							{
+								deathstring = " loses another friend\n";
+							}
+						}
+					}
+					if ((deathmsg == 23))
+					{
+						bprint (TF_FLARE_OFF, targ.netname);
+						bprint (TF_FLARE_OFF, " didn't survive the operation.\n");
+						return;
+					}
+					bprint (TF_FLARE_OFF, attacker.netname);
+					bprint (TF_FLARE_OFF, deathstring);
+					return;
+				}
+				else
+				{
+					attacker.real_frags = (attacker.real_frags + TF_FLARE_OFF);
+					logfrag (attacker, targ);
+					if (!(toggleflags & 128))
+					{
+						attacker.frags = attacker.real_frags;
+					}
+					if ((deathmsg == BOT_DEFEND))
+					{
+						deathstring = " surfs on a grenade from ";
+						deathstring2 = "\n";
+					}
+					else
+					{
+						if ((deathmsg == BOT_AI_FLAGRUN))
+						{
+							deathstring = " gets flayed by ";
+							deathstring2 = "'s nail grenade\n";
+						}
+						else
+						{
+							if ((deathmsg == BOT_AI_SCOUT))
+							{
+								deathstring = " gets spammed by ";
+								deathstring2 = "'s Mirv grenade\n";
+							}
+							else
+							{
+								if ((deathmsg == 11))
+								{
+									deathstring = " is caught by ";
+									deathstring2 = "'s pipebomb trap\n";
+								}
+								else
+								{
+									if ((deathmsg == 24))
+									{
+										deathstring = " gags on ";
+										deathstring2 = "'s noxious gasses\n";
+									}
+									else
+									{
+										if ((deathmsg == 30))
+										{
+											deathstring = "'s ammo detonates him as ";
+											deathstring2 = "'s EMP fries it.\n";
+										}
+										else
+										{
+											if ((deathmsg == 35))
+											{
+												deathstring = " is charred by ";
+												deathstring2 = "'s flash grenade.\n";
+											}
+											else
+											{
+												if ((deathmsg == 31))
+												{
+													deathstring = " stands near some ammo as ";
+													deathstring2 = "'s EMP nukes it\n";
+												}
+												else
+												{
+													if ((deathmsg == 12))
+													{
+														deathstring = " reaches orbit via ";
+														deathstring2 = "'s detpack\n";
+													}
+													else
+													{
+														if ((deathmsg == BOT_RESUPPLYING))
+														{
+															deathstring = " cut the red wire of ";
+															deathstring2 = "'s detpack\n";
+														}
+														else
+														{
+															if ((deathmsg == 13))
+															{
+																deathstring = " dies from ";
+																deathstring2 = "'s mysterious tropical disease\n";
+															}
+															else
+															{
+																if ((deathmsg == 14))
+																{
+																	deathstring = " escapes infection from ";
+																	deathstring2 = " by dying first\n";
+																}
+																else
+																{
+																	if ((deathmsg == BOT_AI_GRAPPLE))
+																	{
+																		deathstring = " eats ";
+																		deathstring2 = "'s pineapple\n";
+																		if ((targ.health < -40))
+																		{
+																			deathstring = " was gibbed by ";
+																			deathstring2 = "'s grenade\n";
+																		}
+																	}
+																	else
+																	{
+																		if ((deathmsg == BOT_AI_FLEE))
+																		{
+																			deathstring = " rides ";
+																			deathstring2 = "'s rocket\n";
+																			if ((targ.health < -40))
+																			{
+																				deathstring = " was gibbed by ";
+																				deathstring2 = "'s rocket\n";
+																			}
+																		}
+																		else
+																		{
+																			if ((deathmsg == 15))
+																			{
+																				if ((rnum < 0.2))
+																				{
+																					deathstring = " is burnt up by ";
+																					deathstring2 = "'s flame\n";
+																				}
+																				else
+																				{
+																					if ((rnum < 0.4))
+																					{
+																						deathstring = " is fried by ";
+																						deathstring2 = "'s fire\n";
+																					}
+																					else
+																					{
+																						if ((rnum < 0.6))
+																						{
+																							deathstring = " feels ";
+																							deathstring2 = "'s fire of wrath\n";
+																						}
+																						else
+																						{
+																							if ((rnum < 0.8))
+																							{
+																								deathstring = " is reduced to ashes by ";
+																								deathstring2 = "\n";
+																							}
+																							else
+																							{
+																								deathstring = " is grilled by ";
+																								deathstring2 = "'s flame\n";
+																							}
+																						}
+																					}
+																				}
+																			}
+																			else
+																			{
+																				if ((deathmsg == 17))
+																				{
+																					if ((attacker.playerclass == BOT_DEFEND))
+																					{
+																						deathstring = " was knife-murdered by ";
+																					}
+																					else
+																					{
+																						deathstring = " was ax-murdered by ";
+																					}
+																					deathstring2 = "\n";
+																				}
+																				else
+																				{
+																					if ((deathmsg == BOT_AVOIDING_HAZARD))
+																					{
+																						deathstring = " was spanner-murdered by ";
+																						deathstring2 = "\n";
+																					}
+																					else
+																					{
+																						if ((deathmsg == TF_FLARE_OFF))
+																						{
+																							deathstring = " chewed on ";
+																							deathstring2 = "'s boomstick\n";
+																						}
+																						else
+																						{
+																							if ((deathmsg == BOT_FIGHTING))
+																							{
+																								deathstring = " ate 2 loads of ";
+																								deathstring2 = "'s buckshot\n";
+																							}
+																							else
+																							{
+																								if ((deathmsg == BOT_AI_FOLLOW))
+																								{
+																									deathstring = " was nailed by ";
+																									deathstring2 = "\n";
+																								}
+																								else
+																								{
+																									if ((deathmsg == BOT_MOVING))
+																									{
+																										deathstring = " was punctured by ";
+																										deathstring2 = "\n";
+																									}
+																									else
+																									{
+																										if ((deathmsg == BOT_AI_BLAST))
+																										{
+																											deathstring = " accepts ";
+																											if ((attacker.waterlevel > TF_FLARE_OFF))
+																											{
+																												deathstring2 = "'s discharge\n";
+																											}
+																											else
+																											{
+																												deathstring2 = "'s shaft\n";
+																											}
+																										}
+																										else
+																										{
+																											if ((deathmsg == 21))
+																											{
+																												deathstring = " grappled with ";
+																												deathstring2 = "\n";
+																											}
+																											else
+																											{
+																												if ((deathmsg == 18))
+																												{
+																													if ((rnum <= 0.3))
+																													{
+																														deathstring = " takes a bullet in the chest from ";
+																														deathstring2 = "\n";
+																													}
+																													else
+																													{
+																														deathstring = " succumbs to sniperfire from ";
+																														deathstring2 = "\n";
+																													}
+																												}
+																												else
+																												{
+																													if ((deathmsg == 29))
+																													{
+																														if ((rnum <= 0.5))
+																														{
+																															deathstring = " gets a third eye from ";
+																															deathstring2 = "\n";
+																														}
+																														else
+																														{
+																															deathstring = " gets his head blown off by ";
+																															deathstring2 = "\n";
+																														}
+																													}
+																													else
+																													{
+																														if ((deathmsg == 28))
+																														{
+																															if ((rnum <= 0.5))
+																															{
+																																deathstring = " is made legless by ";
+																																deathstring2 = "\n";
+																															}
+																															else
+																															{
+																																deathstring = " gets his legs blown off by ";
+																																deathstring2 = "\n";
+																															}
+																														}
+																														else
+																														{
+																															if ((deathmsg == 19))
+																															{
+																																deathstring = " collects ";
+																																deathstring2 = "'s bullet spray.\n";
+																															}
+																															else
+																															{
+																																if ((deathmsg == 20))
+																																{
+																																	deathstring = " gets sawn in half by ";
+																																	deathstring2 = "\n";
+																																}
+																																else
+																																{
+																																	if ((deathmsg == 22))
+																																	{
+																																		deathstring = " gets knifed from behind by ";
+																																		deathstring2 = "\n";
+																																	}
+																																	else
+																																	{
+																																		if ((deathmsg == 25))
+																																		{
+																																			deathstring = " is put to sleep by ";
+																																			deathstring2 = "\n";
+																																		}
+																																		else
+																																		{
+																																			if ((deathmsg == 26))
+																																			{
+																																				deathstring = " gets a hole in his heart from ";
+																																				deathstring2 = "'s railgun\n";
+																																			}
+																																			else
+																																			{
+																																				if ((deathmsg == 33))
+																																				{
+																																					deathstring = " gets well done by ";
+																																					deathstring2 = "'s incendiary rocket\n";
+																																				}
+																																			}
+																																		}
+																																	}
+																																}
+																															}
+																														}
+																													}
+																												}
+																											}
+																										}
+																									}
+																								}
+																							}
+																						}
+																					}
+																				}
+																			}
+																		}
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+					bprint (TF_FLARE_OFF, targ.netname);
+					bprint (TF_FLARE_OFF, deathstring);
+					bprint (TF_FLARE_OFF, attacker.netname);
+					bprint (TF_FLARE_OFF, deathstring2);
+				}
+			}
+			return;
+		}
+		else
+		{
+			if ((attacker.classname == "building_sentrygun"))
+			{
+				if ((targ == attacker.real_owner))
+				{
+					if ((deathmsg == 34))
+					{
+						deathstring = " intercepts his sentry gun's rocket\n";
+					}
+					else
+					{
+						if ((deathmsg == 27))
+						{
+							deathstring = " crossed his sentry gun's line of fire\n";
+						}
+					}
+					bprint (TF_FLARE_OFF, targ.netname);
+					bprint (TF_FLARE_OFF, deathstring);
+				}
+				else
+				{
+					attacker.real_owner.real_frags = (attacker.real_owner.real_frags + TF_FLARE_OFF);
+					logfrag (attacker.real_owner, targ);
+					if (!(toggleflags & 128))
+					{
+						attacker.real_owner.frags = attacker.real_owner.real_frags;
+					}
+					if ((deathmsg == 34))
+					{
+						deathstring = " hates ";
+						deathstring2 = "'s sentry gun\n";
+					}
+					else
+					{
+						if ((deathmsg == 27))
+						{
+							deathstring = " is mown down by ";
+							deathstring2 = "'s sentry gun\n";
+						}
+					}
+					bprint (TF_FLARE_OFF, targ.netname);
+					bprint (TF_FLARE_OFF, deathstring);
+					bprint (TF_FLARE_OFF, attacker.real_owner.netname);
+					bprint (TF_FLARE_OFF, deathstring2);
+				}
+			}
+			else
+			{
+				logfrag (targ, targ);
+				targ.real_frags = (targ.real_frags - TF_FLARE_OFF);
+				if (!(toggleflags & 128))
+				{
+					targ.frags = targ.real_frags;
+				}
+				rnum = targ.watertype;
+				bprint (BOT_FIGHTING, targ.netname);
+				if ((rnum == CONTENT_WATER))
+				{
+					if ((random () < 0.5))
+					{
+						deathstring = " sleeps with the fishes\n";
+					}
+					else
+					{
+						deathstring = " sucks it down\n";
+					}
+				}
+				else
+				{
+					if ((rnum == -4))
+					{
+						if ((random () < 0.5))
+						{
+							deathstring = " gulped a load of slime\n";
+						}
+						else
+						{
+							deathstring = " can't exist on slime alone\n";
+						}
+					}
+					else
+					{
+						if ((rnum == CONTENT_LAVA))
+						{
+							if ((targ.health < -15))
+							{
+								deathstring = " burst into flames\n";
+							}
+							else
+							{
+								if ((random () < 0.5))
+								{
+									deathstring = " turned into hot slag\n";
+								}
+								else
+								{
+									deathstring = " visits the Volcano God\n";
+								}
+							}
+						}
+						else
+						{
+							if ((attacker.classname == "explo_box"))
+							{
+								deathstring = " blew up\n";
+							}
+							else
+							{
+								if (((attacker.solid == BOT_MOVING) && (attacker != world)))
+								{
+									deathstring = " was squished\n";
+								}
+								else
+								{
+									if ((targ.deathtype == "falling"))
+									{
+										targ.deathtype = "";
+										deathstring = " fell to his death\n";
+									}
+									else
+									{
+										if (((attacker.classname == "trap_shooter") || (attacker.classname == "trap_spikeshooter")))
+										{
+											deathstring = " was spiked\n";
+										}
+										else
+										{
+											if ((attacker.classname == "fireball"))
+											{
+												deathstring = " ate a lavaball\n";
+											}
+											else
+											{
+												if ((attacker.classname == "trigger_changelevel"))
+												{
+													deathstring = " tried to leave\n";
+												}
+												else
+												{
+													deathstring = " died\n";
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+				bprint (TF_FLARE_OFF, deathstring);
+			}
+		}
+	}
+	else
+	{
+		if ((targ.classname == "building_sentrygun"))
+		{
+			if ((attacker.classname == "teledeath"))
+			{
+				bprint (TF_FLARE_OFF, targ.real_owner.netname);
+				bprint (TF_FLARE_OFF, "'s sentrygun was telefragged by ");
+				bprint (TF_FLARE_OFF, attacker.owner.netname);
+				bprint (TF_FLARE_OFF, "\n");
+				return;
+			}
+			if ((attacker.classname == "player"))
+			{
+				if ((attacker == targ.real_owner))
+				{
+					bprint (TF_FLARE_OFF, targ.real_owner.netname);
+					bprint (TF_FLARE_OFF, " destroys his sentrygun\n");
+					return;
+				}
+				bprint (TF_FLARE_OFF, targ.real_owner.netname);
+				bprint (TF_FLARE_OFF, "'s sentrygun was destroyed by ");
+				bprint (TF_FLARE_OFF, attacker.netname);
+				bprint (TF_FLARE_OFF, "\n");
+				if (((attacker.team_no > TF_FLARE_LIT) && (attacker.team_no != targ.real_owner.team_no)))
+				{
+					attacker.real_frags = (attacker.real_frags + TF_FLARE_OFF);
+					if (!(toggleflags & 128))
+					{
+						attacker.frags = attacker.real_frags;
+					}
+				}
+				return;
+			}
+		}
+	}
+};

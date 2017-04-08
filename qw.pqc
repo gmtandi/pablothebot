@@ -1,0 +1,20 @@
+
+void (float psize, entity p) KickPlayer =
+{
+	msg_entity = p;
+	if ((psize > CONTENT_WATER))
+	{
+		WriteByte (TF_FLARE_OFF, 34);
+	}
+	else
+	{
+		WriteByte (TF_FLARE_OFF, 35);
+	}
+};
+
+void () muzzleflash =
+{
+	WriteByte (BOT_MOVING, 39);
+	WriteEntity (BOT_MOVING, self);
+	multicast (self.origin, BOT_FIGHTING);
+};

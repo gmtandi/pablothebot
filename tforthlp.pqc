@@ -1,0 +1,126 @@
+
+void () TeamFortress_MOTD =
+{
+	local string ya;
+
+	if ((self.motd == BOT_MOVING))
+	{
+		stuffcmd (self, "is_aliased\n");
+	}
+	if ((self.motd <= 20))
+	{
+		self.motd = (self.motd + TF_FLARE_OFF);
+		return;
+	}
+	if ((self.motd == 21))
+	{
+		if ((TF_FLARE_LIT == TF_FLARE_LIT))
+		{
+			self.tfstate = (self.tfstate | 4096);
+		}
+		if (((teamplay != TF_FLARE_LIT) && (self.team_no == TF_FLARE_LIT)))
+		{
+			stuffcmd (self, "color ");
+			ya = ftos ((TF_FLARE_OFF - TF_FLARE_OFF));
+			stuffcmd (self, ya);
+			stuffcmd (self, "\n");
+		}
+		if ((self.got_aliases == TF_FLARE_LIT))
+		{
+			sprint (self, BOT_FIGHTING, "\n\n\n");
+		}
+		sprint (self, BOT_FIGHTING, "Type help for more info.\n");
+		sprint (self, BOT_FIGHTING, "TeamFortress QuakeWorld 2.5\n");
+		sprint (self, BOT_FIGHTING, "www.planetquake.com/teamfortress/\n");
+		self.current_menu = BOT_AI_GRAPPLE;
+		self.menu_count = 25;
+		self.motd = 22;
+		if ((self.got_aliases == TF_FLARE_OFF))
+		{
+			return;
+		}
+		sprint (self, BOT_FIGHTING, "binding aliases...\n");
+		TeamFortress_Alias ("inv", 135, TF_FLARE_LIT);
+		TeamFortress_Alias ("showtf", 136, TF_FLARE_LIT);
+		TeamFortress_Alias ("autozoom", 174, TF_FLARE_LIT);
+		TeamFortress_Alias ("scout", (100 + TF_FLARE_OFF), TF_FLARE_LIT);
+		TeamFortress_Alias ("sniper", (100 + BOT_FIGHTING), TF_FLARE_LIT);
+		TeamFortress_Alias ("soldier", (100 + BOT_AI_FOLLOW), TF_FLARE_LIT);
+		TeamFortress_Alias ("demoman", (100 + BOT_MOVING), TF_FLARE_LIT);
+		TeamFortress_Alias ("medic", (100 + BOT_AI_GRAPPLE), TF_FLARE_LIT);
+		TeamFortress_Alias ("hwguy", (100 + BOT_AI_FLEE), TF_FLARE_LIT);
+		TeamFortress_Alias ("pyro", (100 + BOT_AI_BLAST), TF_FLARE_LIT);
+		TeamFortress_Alias ("spy", (100 + BOT_DEFEND), TF_FLARE_LIT);
+		TeamFortress_Alias ("engineer", (100 + BOT_AI_FLAGRUN), TF_FLARE_LIT);
+		TeamFortress_Alias ("randompc", (100 + BOT_AI_SCOUT), TF_FLARE_LIT);
+		TeamFortress_Alias ("primeone", 150, TF_FLARE_LIT);
+		TeamFortress_Alias ("primetwo", 151, TF_FLARE_LIT);
+		TeamFortress_Alias ("throwgren", 152, TF_FLARE_LIT);
+		TeamFortress_Alias ("+gren1", 150, TF_FLARE_LIT);
+		TeamFortress_Alias ("+gren2", 151, TF_FLARE_LIT);
+		TeamFortress_Alias ("-gren1", 152, TF_FLARE_LIT);
+		TeamFortress_Alias ("-gren2", 152, TF_FLARE_LIT);
+		TeamFortress_Alias ("detpipe", 170, TF_FLARE_LIT);
+		TeamFortress_Alias ("reload", 173, TF_FLARE_LIT);
+		TeamFortress_Alias ("scan10", 162, TF_FLARE_LIT);
+		TeamFortress_Alias ("scan30", 163, TF_FLARE_LIT);
+		TeamFortress_Alias ("scan100", 164, TF_FLARE_LIT);
+		TeamFortress_Alias ("scanf", 161, TF_FLARE_LIT);
+		TeamFortress_Alias ("scane", 160, TF_FLARE_LIT);
+		TeamFortress_Alias ("det5", 165, TF_FLARE_LIT);
+		TeamFortress_Alias ("det20", 166, TF_FLARE_LIT);
+		TeamFortress_Alias ("det50", 167, TF_FLARE_LIT);
+		TeamFortress_Alias ("+det5", 165, TF_FLARE_LIT);
+		TeamFortress_Alias ("-det5", 169, TF_FLARE_LIT);
+		TeamFortress_Alias ("+det20", 166, TF_FLARE_LIT);
+		TeamFortress_Alias ("-det20", 169, TF_FLARE_LIT);
+		TeamFortress_Alias ("+det50", 167, TF_FLARE_LIT);
+		TeamFortress_Alias ("-det50", 169, TF_FLARE_LIT);
+		TeamFortress_Alias ("showscores", 145, TF_FLARE_LIT);
+		TeamFortress_Alias ("showclasses", 144, TF_FLARE_LIT);
+		TeamFortress_Alias ("query", 119, TF_FLARE_LIT);
+		TeamFortress_Alias ("dropkey", 175, TF_FLARE_LIT);
+		TeamFortress_Alias ("dropammo", 172, TF_FLARE_LIT);
+		TeamFortress_Alias ("showloc", 118, TF_FLARE_LIT);
+		TeamFortress_Alias ("special", 171, TF_FLARE_LIT);
+		TeamFortress_Alias ("saveme", 181, TF_FLARE_LIT);
+		TeamFortress_Alias ("discard", 184, TF_FLARE_LIT);
+		TeamFortress_Alias ("id", 185, TF_FLARE_LIT);
+		TeamFortress_Alias ("flaginfo", 23, TF_FLARE_LIT);
+		TeamFortress_Alias ("maphelp", 131, TF_FLARE_LIT);
+		TeamFortress_Alias ("disguise", 177, TF_FLARE_LIT);
+		TeamFortress_Alias ("feign", 178, TF_FLARE_LIT);
+		TeamFortress_Alias ("build", 179, TF_FLARE_LIT);
+		TeamFortress_Alias ("sbar_on", 182, TF_FLARE_LIT);
+		TeamFortress_Alias ("sbar_off", 183, TF_FLARE_LIT);
+		TeamFortress_Alias ("sbar_200", 71, TF_FLARE_LIT);
+		TeamFortress_Alias ("sbar_240", (71 + TF_FLARE_OFF), TF_FLARE_LIT);
+		TeamFortress_Alias ("sbar_300", (71 + BOT_FIGHTING), TF_FLARE_LIT);
+		TeamFortress_Alias ("sbar_350", (71 + BOT_AI_FOLLOW), TF_FLARE_LIT);
+		TeamFortress_Alias ("sbar_384", (71 + BOT_MOVING), TF_FLARE_LIT);
+		TeamFortress_Alias ("sbar_400", (71 + BOT_AI_GRAPPLE), TF_FLARE_LIT);
+		TeamFortress_Alias ("sbar_480", (71 + BOT_AI_FLEE), TF_FLARE_LIT);
+		TeamFortress_Alias ("sbar_600", (71 + BOT_AI_BLAST), TF_FLARE_LIT);
+		TeamFortress_Alias ("sbar_768", (71 + BOT_DEFEND), TF_FLARE_LIT);
+		TeamFortress_Alias ("bot", (BOT_IMPULSE + TF_FLARE_LIT), TF_FLARE_LIT);
+		TeamFortress_Alias ("is_aliased", 13, TF_FLARE_LIT);
+		stuffcmd (self, "bind 9 \"impulse 9\"\n");
+		stuffcmd (self, "bind 0 \"impulse 10\"\n");
+	}
+};
+
+void () TeamFortress_HelpMap =
+{
+	local entity te;
+
+	te = find (world, classname, "info_tfdetect");
+	if (te)
+	{
+		if ((te.non_team_broadcast != string_null))
+		{
+			sprint (self, BOT_FIGHTING, te.non_team_broadcast);
+			return;
+		}
+	}
+	sprint (self, BOT_FIGHTING, "There is no help for this map.\n");
+};

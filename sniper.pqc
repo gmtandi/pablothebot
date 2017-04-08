@@ -1,0 +1,100 @@
+void () SniperSight_Update;
+
+void () TeamFortress_SniperWeapon =
+{
+	local float it;
+
+	self.impulse = TF_FLARE_LIT;
+	if ((self.tfstate & BOT_FIGHTING))
+	{
+		return;
+	}
+	if (!((self.weapons_carried & BOT_AVOIDING_HAZARD) && (self.weapons_carried & 64)))
+	{
+		return;
+	}
+	if ((self.ammo_shells < TF_FLARE_OFF))
+	{
+		sprint (self, BOT_FIGHTING, "not enough ammo.\n");
+		return;
+	}
+	if ((self.current_weapon == BOT_AVOIDING_HAZARD))
+	{
+		self.current_weapon = 64;
+	}
+	else
+	{
+		self.current_weapon = BOT_AVOIDING_HAZARD;
+	}
+	W_SetCurrentAmmo ();
+};
+
+void (float zoom_level) TF_zoom =
+{
+	local string zl;
+
+	if ((self.tfstate & 4096))
+	{
+		return;
+	}
+	zl = ftos (zoom_level);
+	stuffcmd (self, "fov ");
+	stuffcmd (self, zl);
+	stuffcmd (self, "\n");
+};
+
+void () SniperSight_Update =
+{
+	local vector org;
+
+	if ((!(self.owner.tfstate & FL_WATERJUMP) || (self.owner.current_weapon != BOT_AVOIDING_HAZARD)))
+	{
+		self.owner.tfstate = (self.owner.tfstate - (self.owner.tfstate & FL_WATERJUMP));
+		TeamFortress_SetSpeed (self.owner);
+		self.owner.heat = TF_FLARE_LIT;
+		dremove (self);
+		return;
+	}
+	makevectors (self.owner.v_angle);
+	org = (self.owner.origin + (v_forward * BOT_AI_SCOUT));
+	org_z = (self.owner.absmin_z + (self.owner.size_z * 0.7));
+	traceline (org, (org + (v_forward * 9192)), TF_FLARE_LIT, self);
+	if ((trace_fraction == TF_FLARE_OFF))
+	{
+		setorigin (self, self.owner.origin);
+		return;
+	}
+	self.angles = vectoangles (v_forward);
+	setorigin (self, trace_endpos);
+	self.nextthink = (time + 0.1);
+};
+
+void () SniperSight_Create =
+{
+	local entity sight;
+
+	self.tfstate = (self.tfstate | FL_WATERJUMP);
+	sight = spawn ();
+	sight.owner = self;
+	sight.movetype = BOT_DEFEND;
+	sight.solid = TF_FLARE_LIT;
+	setmodel (sight, "progs/cross1.mdl");
+	sight.classname = "timer";
+	setorigin (sight, self.origin);
+	sight.think = SniperSight_Update;
+	sight.nextthink = (time + 0.05);
+};
+
+void () TeamFortress_AutoZoomToggle =
+{
+	if ((self.tfstate & 4096))
+	{
+		self.tfstate = (self.tfstate - 4096);
+		sprint (self, BOT_FIGHTING, "autozoom ON\n");
+	}
+	else
+	{
+		self.tfstate = (self.tfstate | 4096);
+		sprint (self, BOT_FIGHTING, "autozoom OFF\n");
+	}
+};

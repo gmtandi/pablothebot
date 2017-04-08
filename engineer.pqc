@@ -1,0 +1,743 @@
+void () LaserBolt_Touch;
+void () EMPExplode;
+void () EMPGrenadeTouch;
+void () EMPGrenadeExplode;
+void () TeamFortress_FinishedBuilding;
+void () T_Mortar;
+void () Dispenser_Die;
+void () CheckDistance;
+float (entity obj, entity builder) CheckArea;
+
+void () LaserBolt_Think =
+{
+	self.solid = TF_FLARE_OFF;
+	self.movetype = BOT_AI_FLAGRUN;
+	self.velocity = self.oldorigin;
+	self.touch = LaserBolt_Touch;
+	setmodel (self, "progs/e_spike2.mdl");
+	self.nextthink = (time + TF_FLARE_OFF);
+	self.think = SUB_Remove;
+};
+
+void () LaserBolt_Touch =
+{
+	local vector org;
+
+	if ((other == self.owner))
+	{
+		return;
+	}
+	if (((other == self.enemy) && (self.enemy != world)))
+	{
+		return;
+	}
+	if ((pointcontents (self.origin) == -6))
+	{
+		dremove (self);
+		return;
+	}
+	org = (self.origin - (BOT_DEFEND * normalize (self.velocity)));
+	if (other.health)
+	{
+		SpawnBlood (org, 15);
+		deathmsg = 26;
+		TF_T_Damage (other, self, self.enemy, 25, TF_FLARE_LIT, BOT_DEFEND);
+		self.velocity = self.oldorigin;
+		self.owner = other;
+		setmodel (self, string_null);
+		self.touch = SUB_Null;
+		self.nextthink = (time + 0.1);
+		self.think = LaserBolt_Think;
+		return;
+	}
+	else
+	{
+		WriteByte (BOT_MOVING, 23);
+		WriteByte (BOT_MOVING, TF_FLARE_LIT);
+		WriteCoord (BOT_MOVING, self.origin_x);
+		WriteCoord (BOT_MOVING, self.origin_y);
+		WriteCoord (BOT_MOVING, self.origin_z);
+		multicast (self.origin, TF_FLARE_OFF);
+	}
+	dremove (self);
+};
+
+void () W_FireLaser =
+{
+	local vector vec;
+	local vector org;
+
+	self.ammo_nails = (self.ammo_nails - TF_FLARE_OFF);
+	self.currentammo = (self.ammo_nails - TF_FLARE_OFF);
+	makevectors (self.v_angle);
+	org = (self.origin + (v_forward * BOT_DEFEND));
+	vec = aim (self, 10000);
+	vec = normalize (vec);
+	newmis = spawn ();
+	newmis.owner = self;
+	newmis.enemy = self;
+	newmis.movetype = BOT_AI_FLAGRUN;
+	newmis.solid = TF_FLARE_OFF;
+	setmodel (newmis, "progs/e_spike1.mdl");
+	setsize (newmis, '0 0 0', '0 0 0');
+	setorigin (newmis, (org + '0 0 16'));
+	newmis.velocity = (vec * 1500);
+	newmis.angles = vectoangles (newmis.velocity);
+	newmis.oldorigin = newmis.velocity;
+	newmis.nextthink = (time + BOT_AI_GRAPPLE);
+	newmis.think = SUB_Remove;
+	newmis.touch = LaserBolt_Touch;
+};
+
+void () EMPExplode =
+{
+	local float expsize;
+
+	expsize = BOT_AI_SCOUT;
+	if ((self.touch == weapon_touch))
+	{
+		expsize = 60;
+	}
+	else
+	{
+		if ((self.classname == "item_shells"))
+		{
+			expsize = (50 + self.aflag);
+		}
+		else
+		{
+			if ((self.classname == "item_spikes"))
+			{
+				expsize = 40;
+			}
+			else
+			{
+				if ((self.classname == "item_rockets"))
+				{
+					expsize = (100 + (self.aflag * BOT_MOVING));
+				}
+				else
+				{
+					if ((self.classname == "item_cells"))
+					{
+						expsize = (100 + (self.aflag * BOT_AI_FOLLOW));
+					}
+					else
+					{
+						if ((self.classname == "item_weapon"))
+						{
+							expsize = 60;
+						}
+						else
+						{
+							dprint ("EMPExplode: Attempting to explode a ");
+							dprint (self.classname);
+							dprint ("\n");
+							return;
+						}
+					}
+				}
+			}
+		}
+	}
+	deathmsg = 31;
+	T_RadiusDamage (self, self.enemy, expsize, world);
+	WriteByte (BOT_MOVING, 23);
+	WriteByte (BOT_MOVING, BOT_AI_FOLLOW);
+	WriteCoord (BOT_MOVING, self.origin_x);
+	WriteCoord (BOT_MOVING, self.origin_y);
+	WriteCoord (BOT_MOVING, self.origin_z);
+	multicast (self.origin, TF_FLARE_OFF);
+	Respawn_Item (self, self.enemy);
+};
+
+void () EMPGrenadeTouch =
+{
+	sound (self, TF_FLARE_OFF, "weapons/bounce.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+	if ((self.velocity == '0 0 0'))
+	{
+		self.avelocity = '0 0 0';
+	}
+};
+
+void () EMPGrenadeExplode =
+{
+	local float expsize;
+	local entity te;
+	local entity oldself;
+
+	WriteByte (BOT_MOVING, 23);
+	WriteByte (BOT_MOVING, BOT_MOVING);
+	WriteCoord (BOT_MOVING, self.origin_x);
+	WriteCoord (BOT_MOVING, self.origin_y);
+	WriteCoord (BOT_MOVING, self.origin_z);
+	multicast (self.origin, TF_FLARE_OFF);
+	te = findradius (self.origin, 240);
+	while (te)
+	{
+		if (((te.touch == ammo_touch) || (te.touch == weapon_touch)))
+		{
+			te.solid = TF_FLARE_LIT;
+			te.enemy = self.owner;
+			te.nextthink = ((time + TF_FLARE_OFF) + (random () * BOT_FIGHTING));
+			te.think = EMPExplode;
+		}
+		else
+		{
+			if ((te.think == TeamFortress_DetpackExplode))
+			{
+				te.solid = TF_FLARE_LIT;
+				te.nextthink = ((time + TF_FLARE_OFF) + (random () * BOT_FIGHTING));
+				dremove (te.oldenemy);
+			}
+			else
+			{
+				if ((te.classname == "pipebomb"))
+				{
+					te.nextthink = ((time + 0.1) + (random () * BOT_FIGHTING));
+				}
+				else
+				{
+					if ((te.classname == "building_dispenser"))
+					{
+						TF_T_Damage (te, self, self.owner, BOT_IMPULSE, TF_FLARE_LIT, BOT_MOVING);
+					}
+					else
+					{
+						if ((te.classname == "ammobox"))
+						{
+							expsize = TF_FLARE_LIT;
+							expsize = (expsize + (te.ammo_shells * 0.75));
+							expsize = (expsize + ((te.ammo_rockets * 0.75) * BOT_FIGHTING));
+							expsize = (expsize + ((te.ammo_cells * 0.75) * BOT_FIGHTING));
+							if ((expsize > TF_FLARE_LIT))
+							{
+								te.solid = TF_FLARE_LIT;
+								deathmsg = 30;
+								T_RadiusDamage (te, self.owner, expsize, te);
+								te.think = SUB_Remove;
+								te.nextthink = (time + 0.1);
+								WriteByte (BOT_MOVING, 23);
+								WriteByte (BOT_MOVING, BOT_AI_FOLLOW);
+								WriteCoord (BOT_MOVING, te.origin_x);
+								WriteCoord (BOT_MOVING, te.origin_y);
+								WriteCoord (BOT_MOVING, te.origin_z);
+								multicast (te.origin, TF_FLARE_OFF);
+							}
+						}
+						else
+						{
+							if (((te.classname == "player") || (te.touch == BackpackTouch)))
+							{
+								expsize = TF_FLARE_LIT;
+								expsize = (expsize + (te.ammo_shells * 0.75));
+								expsize = (expsize + ((te.ammo_rockets * 0.75) * BOT_FIGHTING));
+								if ((te.playerclass != BOT_AI_FLAGRUN))
+								{
+									expsize = (expsize + (te.ammo_cells * 0.75));
+								}
+								if ((expsize > TF_FLARE_LIT))
+								{
+									deathmsg = 30;
+									T_RadiusDamage (te, self.owner, expsize, te);
+									if ((te.touch != BackpackTouch))
+									{
+										TF_T_Damage (te, self, self.owner, expsize, TF_FLARE_LIT, BOT_MOVING);
+										te.ammo_shells = ceil ((te.ammo_shells * 0.25));
+										te.ammo_rockets = ceil ((te.ammo_rockets * 0.25));
+										if ((te.playerclass != BOT_AI_FLAGRUN))
+										{
+											te.ammo_cells = ceil ((te.ammo_cells * 0.25));
+										}
+										oldself = self;
+										self = te;
+										W_SetCurrentAmmo ();
+										self = oldself;
+									}
+									else
+									{
+										te.think = SUB_Remove;
+										te.nextthink = (time + 0.1);
+									}
+									WriteByte (BOT_MOVING, 23);
+									WriteByte (BOT_MOVING, BOT_AI_FOLLOW);
+									WriteCoord (BOT_MOVING, te.origin_x);
+									WriteCoord (BOT_MOVING, te.origin_y);
+									WriteCoord (BOT_MOVING, te.origin_z);
+									multicast (te.origin, TF_FLARE_OFF);
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		te = te.chain;
+	}
+	dremove (self);
+};
+
+void () TeamFortress_EngineerBuild =
+{
+	local entity te;
+
+	if (!(self.flags & FL_ONGROUND))
+	{
+		CenterPrint (self, "You can't build in the air!\n\n");
+		return;
+	}
+	if ((self.is_building == TF_FLARE_LIT))
+	{
+		if ((((self.ammo_cells < 100) && (self.has_dispenser == TF_FLARE_LIT)) && (self.has_sentry == TF_FLARE_LIT)))
+		{
+			CenterPrint (self, "You don't have enough metal to \nbuild anything.\n\n");
+			return;
+		}
+		self.current_menu = 15;
+		self.menu_count = 25;
+	}
+	else
+	{
+		if ((self.is_building == TF_FLARE_OFF))
+		{
+			sprint (self, BOT_FIGHTING, "You stop building.\n");
+			self.tfstate = (self.tfstate - (self.tfstate & 65536));
+			TeamFortress_SetSpeed (self);
+			te = find (world, netname, "build_timer");
+			while (te)
+			{
+				if ((te.owner == self))
+				{
+					dremove (te);
+					te = world;
+				}
+				else
+				{
+					te = find (te, netname, "build_timer");
+				}
+			}
+			self.is_building = TF_FLARE_LIT;
+			self.current_weapon = self.weapon;
+			W_SetCurrentAmmo ();
+		}
+	}
+};
+
+float (entity obj, entity builder) CheckArea =
+{
+	local vector src;
+	local vector end;
+	local float pos;
+
+	pos = pointcontents (obj.origin);
+	if (((pos == -2) || (pos == -6)))
+	{
+		return (TF_FLARE_LIT);
+	}
+	src_x = ((obj.origin_x + obj.maxs_x) + BOT_RESUPPLYING);
+	src_y = ((obj.origin_y + obj.maxs_y) + BOT_RESUPPLYING);
+	src_z = ((obj.origin_z + obj.maxs_z) + BOT_RESUPPLYING);
+	pos = pointcontents (src);
+	if (((pos == -2) || (pos == -6)))
+	{
+		return (TF_FLARE_LIT);
+	}
+	end_x = ((obj.origin_x + obj.mins_x) - BOT_RESUPPLYING);
+	end_y = ((obj.origin_y + obj.mins_y) - BOT_RESUPPLYING);
+	end_z = ((obj.origin_z + obj.mins_z) - BOT_RESUPPLYING);
+	traceline (src, end, TF_FLARE_OFF, obj);
+	if ((trace_fraction != TF_FLARE_OFF))
+	{
+		return (TF_FLARE_LIT);
+	}
+	pos = pointcontents (end);
+	if (((pos == -2) || (pos == -6)))
+	{
+		return (TF_FLARE_LIT);
+	}
+	src_x = ((obj.origin_x + obj.mins_x) - BOT_RESUPPLYING);
+	src_y = ((obj.origin_y + obj.maxs_y) + BOT_RESUPPLYING);
+	src_z = ((obj.origin_z + obj.maxs_z) + BOT_RESUPPLYING);
+	pos = pointcontents (src);
+	if (((pos == -2) || (pos == -6)))
+	{
+		return (TF_FLARE_LIT);
+	}
+	end_x = ((obj.origin_x + obj.maxs_x) + BOT_RESUPPLYING);
+	end_y = ((obj.origin_y + obj.mins_y) - BOT_RESUPPLYING);
+	end_z = ((obj.origin_z + obj.mins_z) - BOT_RESUPPLYING);
+	traceline (src, end, TF_FLARE_OFF, obj);
+	if ((trace_fraction != TF_FLARE_OFF))
+	{
+		return (TF_FLARE_LIT);
+	}
+	pos = pointcontents (end);
+	if (((pos == -2) || (pos == -6)))
+	{
+		return (TF_FLARE_LIT);
+	}
+	traceline (builder.origin, obj.origin, TF_FLARE_OFF, builder);
+	if ((trace_fraction != TF_FLARE_OFF))
+	{
+		return (TF_FLARE_LIT);
+	}
+	return (TF_FLARE_OFF);
+};
+
+void (float objtobuild) TeamFortress_Build =
+{
+	local float btime;
+	local entity te;
+	local vector tmp1;
+	local vector tmp2;
+
+	newmis = spawn ();
+	makevectors (self.v_angle);
+	v_forward_z = TF_FLARE_LIT;
+	v_forward = (normalize (v_forward) * 64);
+	newmis.origin = (self.origin + v_forward);
+	if ((objtobuild == TF_FLARE_OFF))
+	{
+		if (self.has_dispenser)
+		{
+			sprint (self, BOT_FIGHTING, "You can only have one dispenser.\nTry dismantling your old one.\n");
+			return;
+		}
+		tmp1 = '-16 -16 0';
+		tmp2 = '16 16 48';
+		newmis.mdl = "progs/disp.mdl";
+		newmis.netname = "dispenser";
+		btime = (time + BOT_FIGHTING);
+	}
+	else
+	{
+		if ((objtobuild == BOT_FIGHTING))
+		{
+			if (self.has_sentry)
+			{
+				sprint (self, BOT_FIGHTING, "You can only have one sentry gun.\nTry dismantling your old one.\n");
+				return;
+			}
+			tmp1 = '-16 -16 0';
+			tmp2 = '16 16 48';
+			newmis.mdl = "progs/turrbase.mdl";
+			newmis.netname = "sentrygun";
+			btime = (time + BOT_AI_GRAPPLE);
+		}
+	}
+	if ((CheckArea (newmis, self) == TF_FLARE_LIT))
+	{
+		sprint (self, BOT_FIGHTING, "Not enough room to build here\n");
+		dremove (newmis);
+		return;
+	}
+	self.is_building = TF_FLARE_OFF;
+	self.immune_to_check = (time + BOT_FIGHTING);
+	self.tfstate = (self.tfstate | 65536);
+	self.weapon = self.current_weapon;
+	self.current_weapon = TF_FLARE_LIT;
+	self.weaponmodel = "";
+	self.weaponframe = TF_FLARE_LIT;
+	TeamFortress_SetSpeed (self);
+	newmis.owner = self;
+	newmis.classname = "timer";
+	newmis.netname = "build_timer";
+	newmis.nextthink = btime;
+	newmis.think = TeamFortress_FinishedBuilding;
+	newmis.colormap = self.colormap;
+	newmis.weapon = objtobuild;
+	newmis.angles_y = anglemod ((self.angles_y + 180));
+	newmis.velocity = '0 0 8';
+	newmis.movetype = BOT_AI_FLEE;
+	newmis.solid = BOT_FIGHTING;
+	setmodel (newmis, newmis.mdl);
+	setsize (newmis, tmp1, tmp2);
+	setorigin (newmis, newmis.origin);
+	newmis.flags = (newmis.flags - (newmis.flags & FL_ONGROUND));
+};
+
+void () DispenserThink =
+{
+	self.ammo_shells = (self.ammo_shells + rint ((400 / 20)));
+	self.ammo_cells = (self.ammo_cells + rint ((400 / 20)));
+	self.ammo_nails = (self.ammo_nails + rint ((600 / 20)));
+	self.ammo_rockets = (self.ammo_rockets + rint ((300 / 20)));
+	self.armorvalue = (self.armorvalue + rint ((500 / 20)));
+	if ((self.ammo_shells > 400))
+	{
+		self.ammo_shells = 400;
+	}
+	if ((self.ammo_nails > 600))
+	{
+		self.ammo_nails = 600;
+	}
+	if ((self.ammo_rockets > 300))
+	{
+		self.ammo_rockets = 300;
+	}
+	if ((self.ammo_cells > 400))
+	{
+		self.ammo_cells = 400;
+	}
+	if ((self.armorvalue > 500))
+	{
+		self.armorvalue = 500;
+	}
+	self.nextthink = (time + BOT_AI_SCOUT);
+};
+
+void () TeamFortress_FinishedBuilding =
+{
+	local entity oldself;
+	local float current_yaw;
+	local vector source;
+
+	if ((self.owner.is_building != TF_FLARE_OFF))
+	{
+		return;
+	}
+	oldself = self;
+	self = self.owner;
+	oldself.owner = world;
+	oldself.real_owner = self;
+	self.is_building = TF_FLARE_LIT;
+	self.tfstate = (self.tfstate - (self.tfstate & 65536));
+	self.current_weapon = self.weapon;
+	self.StatusRefreshTime = (time + 0.1);
+	TeamFortress_SetSpeed (self);
+	if ((oldself.weapon == TF_FLARE_OFF))
+	{
+		self.has_dispenser = TF_FLARE_OFF;
+		sprint (self, BOT_FIGHTING, "You finish building the dispenser.\n");
+		teamsprint (self.team_no, self, self.netname);
+		teamsprint (self.team_no, self, " has built a Dispenser.\n");
+		self.ammo_cells = (self.ammo_cells - 100);
+		oldself.classname = "building_dispenser";
+		oldself.netname = "dispenser";
+		oldself.blocked = T_Dispenser;
+		oldself.touch = T_Dispenser;
+		oldself.max_health = 150;
+		oldself.health = 150;
+		oldself.think = DispenserThink;
+		oldself.nextthink = (time + BOT_AI_GRAPPLE);
+		oldself.th_die = Dispenser_Die;
+		oldself.mdl = "progs/disp.mdl";
+		oldself.team_no = self.team_no;
+		oldself.real_owner = self;
+		oldself.colormap = self.colormap;
+		oldself.takedamage = BOT_FIGHTING;
+		oldself.owner = world;
+		oldself.movetype = BOT_AI_FLEE;
+		oldself.velocity = '0 0 8';
+		oldself.flags = (oldself.flags - (oldself.flags & FL_ONGROUND));
+		oldself.ammo_shells = ceil ((self.ammo_shells * 0.25));
+		oldself.ammo_nails = ceil ((self.ammo_nails * 0.25));
+		oldself.ammo_rockets = ceil ((self.ammo_rockets * 0.25));
+		oldself.ammo_cells = ceil ((self.ammo_cells * 0.25));
+		oldself.armorvalue = ceil ((self.armorvalue * 0.25));
+		self.ammo_shells = ceil ((self.ammo_shells * 0.75));
+		self.ammo_nails = ceil ((self.ammo_nails * 0.75));
+		self.ammo_rockets = ceil ((self.ammo_rockets * 0.75));
+		self.ammo_cells = ceil ((self.ammo_cells * 0.75));
+		self.armorvalue = ceil ((self.armorvalue * 0.75));
+		oldself.solid = BOT_FIGHTING;
+		setmodel (oldself, oldself.mdl);
+		setsize (oldself, '-8 -8 0', '8 8 24');
+		setorigin (oldself, oldself.origin);
+	}
+	else
+	{
+		if ((oldself.weapon == BOT_FIGHTING))
+		{
+			self.has_sentry = TF_FLARE_OFF;
+			sprint (self, BOT_FIGHTING, "You finish building the sentry gun.\n");
+			teamsprint (self.team_no, self, self.netname);
+			teamsprint (self.team_no, self, " has built a Sentry Gun.\n");
+			oldself.classname = "building_sentrygun_base";
+			oldself.netname = "sentry gun";
+			oldself.takedamage = TF_FLARE_LIT;
+			oldself.th_die = Sentry_Die;
+			self.ammo_cells = (self.ammo_cells - 130);
+			setsize (oldself, '-16 -16 0', '16 16 4');
+			newmis = spawn ();
+			newmis.classname = "building_sentrygun";
+			newmis.health = 150;
+			newmis.max_health = newmis.health;
+			newmis.weapon = TF_FLARE_OFF;
+			newmis.th_die = Sentry_Die;
+			newmis.th_pain = Sentry_Pain;
+			newmis.mdl = "progs/turrgun.mdl";
+			sound (oldself, BOT_AI_FOLLOW, "weapons/turrset.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+			newmis.solid = BOT_FIGHTING;
+			setmodel (newmis, newmis.mdl);
+			setsize (newmis, '-16 -16 0', '16 16 48');
+			setorigin (newmis, (oldself.origin + '0 0 8'));
+			newmis.real_owner = oldself.real_owner;
+			newmis.trigger_field = oldself;
+			oldself.oldenemy = newmis;
+			newmis.movetype = BOT_MOVING;
+			oldself.colormap = self.colormap;
+			newmis.colormap = self.colormap;
+			newmis.takedamage = BOT_FIGHTING;
+			newmis.velocity = '0 0 -8';
+			newmis.flags = (newmis.flags - (newmis.flags & FL_ONGROUND));
+			oldself.flags = (oldself.flags - (oldself.flags & FL_ONGROUND));
+			newmis.team_no = self.team_no;
+			newmis.think = lvl1_sentry_stand;
+			newmis.nextthink = (time + 0.5);
+			newmis.yaw_speed = BOT_AI_SCOUT;
+			newmis.heat = TF_FLARE_LIT;
+			newmis.angles_x = TF_FLARE_LIT;
+			newmis.angles_y = oldself.angles_y;
+			newmis.angles_z = TF_FLARE_LIT;
+			newmis.waitmin = anglemod ((newmis.angles_y - 50));
+			newmis.waitmax = anglemod ((newmis.angles_y + 50));
+			if ((newmis.waitmin > newmis.waitmax))
+			{
+				newmis.waitmin = newmis.waitmax;
+				newmis.waitmax = anglemod ((newmis.angles_y - 50));
+			}
+			newmis.ammo_shells = 25;
+			newmis.maxammo_shells = 100;
+			newmis.maxammo_rockets = 20;
+		}
+	}
+	W_SetCurrentAmmo ();
+};
+
+void () T_Mortar =
+{
+	self.touch = T_Mortar;
+};
+
+void () T_Dispenser =
+{
+	local entity dist_checker;
+
+	if ((other.classname != "player"))
+	{
+		return;
+	}
+	if (((other.building == world) && (other.building_wait < time)))
+	{
+		other.current_menu = 19;
+		other.menu_count = 25;
+		other.building = self;
+		dist_checker = spawn ();
+		dist_checker.classname = "timer";
+		dist_checker.owner = other;
+		dist_checker.enemy = self;
+		dist_checker.think = CheckDistance;
+		dist_checker.nextthink = (time + 0.3);
+	}
+};
+
+void () Dispenser_Die =
+{
+	self.real_owner.has_dispenser = TF_FLARE_LIT;
+	ThrowGib ("progs/dgib1.mdl", -30);
+	ThrowGib ("progs/dgib2.mdl", -50);
+	ThrowGib ("progs/dgib3.mdl", -50);
+	WriteByte (BOT_MOVING, 23);
+	WriteByte (BOT_MOVING, BOT_AI_FOLLOW);
+	WriteCoord (BOT_MOVING, self.origin_x);
+	WriteCoord (BOT_MOVING, self.origin_y);
+	WriteCoord (BOT_MOVING, self.origin_z);
+	multicast (self.origin, TF_FLARE_OFF);
+	BecomeExplosion ();
+};
+
+void (entity disp) Engineer_UseDispenser =
+{
+	local entity dist_checker;
+	local string st;
+
+	sprint (self, BOT_FIGHTING, "Dispenser has ");
+	st = ftos (disp.health);
+	sprint (self, BOT_FIGHTING, st);
+	sprint (self, BOT_FIGHTING, " health\n");
+	st = ftos (disp.ammo_shells);
+	sprint (self, BOT_FIGHTING, st);
+	sprint (self, BOT_FIGHTING, " shells, ");
+	st = ftos (disp.ammo_nails);
+	sprint (self, BOT_FIGHTING, st);
+	sprint (self, BOT_FIGHTING, " nails,");
+	st = ftos (disp.ammo_rockets);
+	sprint (self, BOT_FIGHTING, st);
+	sprint (self, BOT_FIGHTING, " rockets\n");
+	st = ftos (disp.ammo_cells);
+	sprint (self, BOT_FIGHTING, st);
+	sprint (self, BOT_FIGHTING, " cells, and ");
+	st = ftos (disp.armorvalue);
+	sprint (self, BOT_FIGHTING, st);
+	sprint (self, BOT_FIGHTING, " armor\n");
+	self.current_menu = BOT_RESUPPLYING;
+	self.menu_count = 25;
+	self.building = disp;
+	dist_checker = spawn ();
+	dist_checker.classname = "timer";
+	dist_checker.owner = self;
+	dist_checker.enemy = disp;
+	dist_checker.think = CheckDistance;
+	dist_checker.nextthink = (time + 0.3);
+};
+
+void (entity gun) Engineer_UseSentryGun =
+{
+	local entity dist_checker;
+	local string st;
+
+	sprint (self, BOT_FIGHTING, "Level ");
+	st = ftos (gun.weapon);
+	sprint (self, BOT_FIGHTING, st);
+	sprint (self, BOT_FIGHTING, " Sentry Gun has ");
+	st = ftos (gun.health);
+	sprint (self, BOT_FIGHTING, st);
+	sprint (self, BOT_FIGHTING, " health, ");
+	st = ftos (gun.ammo_shells);
+	sprint (self, BOT_FIGHTING, st);
+	sprint (self, BOT_FIGHTING, " shells");
+	if ((gun.weapon == BOT_AI_FOLLOW))
+	{
+		st = ftos (gun.ammo_rockets);
+		sprint (self, BOT_FIGHTING, ", ");
+		sprint (self, BOT_FIGHTING, st);
+		sprint (self, BOT_FIGHTING, " rockets");
+	}
+	sprint (self, BOT_FIGHTING, "\n");
+	self.current_menu = 17;
+	self.menu_count = 25;
+	self.building = gun;
+	dist_checker = spawn ();
+	dist_checker.classname = "timer";
+	dist_checker.owner = self;
+	dist_checker.enemy = gun;
+	dist_checker.think = CheckDistance;
+	dist_checker.nextthink = (time + 0.3);
+};
+
+void (entity mortar) Engineer_UseMortar =
+{
+};
+
+void () CheckDistance =
+{
+	local vector dist;
+
+	if ((self.owner.building != self.enemy))
+	{
+		dremove (self);
+		return;
+	}
+	dist = (self.enemy.origin - self.owner.origin);
+	if ((vlen (dist) > 64))
+	{
+		CenterPrint (self.owner, "\n");
+		self.owner.menu_count = 25;
+		self.owner.current_menu = TF_FLARE_OFF;
+		self.owner.building = world;
+		dremove (self);
+		return;
+	}
+	self.nextthink = (time + 0.3);
+};

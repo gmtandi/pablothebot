@@ -1,0 +1,436 @@
+void () ConcussionGrenadeTouch;
+void () ConcussionGrenadeExplode;
+void (entity inflictor, entity attacker, float bounce, entity ignore) T_RadiusBounce;
+entity (entity scanner, float scanrange, float enemies, float friends) T_RadiusScan;
+
+void () FlashGrenadeTouch =
+{
+	sound (self, TF_FLARE_OFF, "weapons/bounce.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+	if ((self.velocity == '0 0 0'))
+	{
+		self.avelocity = '0 0 0';
+	}
+};
+
+void () FlashTimer =
+{
+	local entity te;
+	local string st;
+
+	te = self.owner;
+	te.FlashTime = (te.FlashTime - 0.1);
+	if ((te.FlashTime < BOT_AI_GRAPPLE))
+	{
+		te.FlashTime = TF_FLARE_LIT;
+		stuffcmd (te, "v_cshift 0\n");
+		remove (self);
+		return;
+	}
+	st = ftos ((te.FlashTime * BOT_AI_SCOUT));
+	stuffcmd (te, "v_cshift ");
+	stuffcmd (te, st);
+	stuffcmd (te, " ");
+	stuffcmd (te, st);
+	stuffcmd (te, " ");
+	stuffcmd (te, st);
+	stuffcmd (te, " ");
+	stuffcmd (te, st);
+	stuffcmd (te, "\n");
+	self.nextthink = (time + 0.1);
+};
+
+void () FlashGrenadeExplode =
+{
+	local float expsize;
+	local entity te;
+	local entity oldself;
+	local string st;
+
+	self.effects = (self.effects | BOT_MOVING);
+	WriteByte (BOT_MOVING, 23);
+	WriteByte (BOT_MOVING, BOT_MOVING);
+	WriteCoord (BOT_MOVING, self.origin_x);
+	WriteCoord (BOT_MOVING, self.origin_y);
+	WriteCoord (BOT_MOVING, self.origin_z);
+	multicast (self.origin, TF_FLARE_OFF);
+	te = findradius (self.origin, BOT_IMPULSE);
+	while (te)
+	{
+		if ((te.classname == "player"))
+		{
+			deathmsg = 35;
+			TF_T_Damage (te, self, self.owner, 60, TF_FLARE_LIT, BOT_RESUPPLYING);
+			if ((te.health > TF_FLARE_LIT))
+			{
+				if ((te.FlashTime == TF_FLARE_LIT))
+				{
+					newmis = spawn ();
+					newmis.classname = "timer";
+					newmis.netname = "flashtimer";
+					newmis.team_no = self.owner.team_no;
+					newmis.owner = te;
+					newmis.think = FlashTimer;
+					newmis.nextthink = (time + TF_FLARE_OFF);
+				}
+				if ((te == self.owner))
+				{
+					te.FlashTime = BOT_RESUPPLYING;
+				}
+				else
+				{
+					te.FlashTime = 24;
+				}
+				st = ftos ((te.FlashTime * BOT_AI_SCOUT));
+				stuffcmd (te, "v_cshift ");
+				stuffcmd (te, st);
+				stuffcmd (te, " ");
+				stuffcmd (te, st);
+				stuffcmd (te, " ");
+				stuffcmd (te, st);
+				stuffcmd (te, " ");
+				stuffcmd (te, st);
+				stuffcmd (te, "\n");
+			}
+		}
+		te = te.chain;
+	}
+	dremove (self);
+};
+
+void () ConcussionGrenadeTouch =
+{
+	sound (self, TF_FLARE_OFF, "weapons/bounce.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+	if ((self.velocity == '0 0 0'))
+	{
+		self.avelocity = '0 0 0';
+	}
+};
+
+void () ConcussionGrenadeExplode =
+{
+	T_RadiusBounce (self, self.owner, 240, world);
+	WriteByte (BOT_MOVING, 23);
+	WriteByte (BOT_MOVING, BOT_AI_FOLLOW);
+	WriteCoord (BOT_MOVING, self.origin_x);
+	WriteCoord (BOT_MOVING, self.origin_y);
+	WriteCoord (BOT_MOVING, self.origin_z);
+	multicast (self.origin, TF_FLARE_OFF);
+	dremove (self);
+};
+
+void () ConcussionGrenadeTimer =
+{
+	local string st;
+
+	if ((self.owner.invincible_finished > time))
+	{
+		stuffcmd (self.owner, "v_idlescale 0\n");
+		dremove (self);
+		return;
+	}
+	newmis = spawn ();
+	setmodel (newmis, "progs/s_bubble.spr");
+	setorigin (newmis, self.owner.origin);
+	newmis.movetype = BOT_DEFEND;
+	newmis.solid = TF_FLARE_LIT;
+	newmis.velocity = '0 0 15';
+	newmis.nextthink = (time + 0.5);
+	newmis.think = bubble_bob;
+	newmis.touch = bubble_remove;
+	newmis.classname = "bubble";
+	newmis.frame = TF_FLARE_LIT;
+	newmis.cnt = TF_FLARE_LIT;
+	setsize (newmis, '-8 -8 -8', '8 8 8');
+	self.health = (self.health - 20);
+	if ((self.owner.playerclass == BOT_AI_GRAPPLE))
+	{
+		self.health = (self.health - 20);
+	}
+	if ((self.health < TF_FLARE_LIT))
+	{
+		self.health = TF_FLARE_LIT;
+	}
+	self.nextthink = (time + BOT_AI_GRAPPLE);
+	st = ftos (self.health);
+	stuffcmd (self.owner, "v_idlescale ");
+	stuffcmd (self.owner, st);
+	stuffcmd (self.owner, "\n");
+	if ((self.health == TF_FLARE_LIT))
+	{
+		dremove (self);
+	}
+};
+
+void (float scanrange) TeamFortress_Scan =
+{
+	local string power;
+	local entity list;
+	local float scen;
+	local float scfr;
+	local vector lightningvec;
+	local float enemy_detected;
+	local float any_detected;
+	local vector vf;
+	local vector vr;
+	local vector e;
+	local float res1;
+	local float res2;
+	local float res3;
+	local float vf_e_angle;
+	local float vr_e_angle;
+	local float scancost;
+
+	self.impulse = TF_FLARE_LIT;
+	self.last_impulse = TF_FLARE_LIT;
+	if ((self.classname == "player"))
+	{
+		if (!(self.tf_items & TF_FLARE_OFF))
+		{
+			return;
+		}
+		if ((scanrange == 160))
+		{
+			if ((self.tf_items_flags & TF_FLARE_OFF))
+			{
+				sprint (self, BOT_FIGHTING, "Enemy Scanning disabled.\n");
+				self.tf_items_flags = (self.tf_items_flags - TF_FLARE_OFF);
+				return;
+			}
+			sprint (self, BOT_FIGHTING, "Enemy Scanning enabled.\n");
+			self.tf_items_flags = (self.tf_items_flags | TF_FLARE_OFF);
+			return;
+		}
+		if ((scanrange == 161))
+		{
+			if ((self.tf_items_flags & BOT_FIGHTING))
+			{
+				sprint (self, BOT_FIGHTING, "Friendly Scanning disabled.\n");
+				self.tf_items_flags = (self.tf_items_flags - BOT_FIGHTING);
+				return;
+			}
+			sprint (self, BOT_FIGHTING, "Friendly Scanning enabled.\n");
+			self.tf_items_flags = (self.tf_items_flags | BOT_FIGHTING);
+			return;
+		}
+		scancost = ceil ((scanrange / 20));
+		if ((scancost > self.ammo_cells))
+		{
+			scanrange = (self.ammo_cells * 20);
+			scancost = self.ammo_cells;
+		}
+		if ((scanrange <= TF_FLARE_LIT))
+		{
+			sprint (self, BOT_FIGHTING, "No cells.\n");
+			return;
+		}
+		if ((scanrange > 50))
+		{
+			scanrange = 50;
+		}
+		scen = TF_FLARE_LIT;
+		scfr = TF_FLARE_LIT;
+		if ((self.tf_items_flags & TF_FLARE_OFF))
+		{
+			scen = TF_FLARE_OFF;
+		}
+		if ((self.tf_items_flags & BOT_FIGHTING))
+		{
+			scfr = TF_FLARE_OFF;
+		}
+		if (((scen == TF_FLARE_LIT) && (scfr == TF_FLARE_LIT)))
+		{
+			sprint (self, BOT_FIGHTING, "All scanner functions are disabled.\n");
+			return;
+		}
+		sprint (self, BOT_FIGHTING, "Power Usage: ");
+		power = ftos (scancost);
+		sprint (self, BOT_FIGHTING, power);
+		sprint (self, BOT_FIGHTING, ". Scanning...\n");
+		self.ammo_cells = (self.ammo_cells - scancost);
+		scanrange = (scanrange * 100);
+		list = T_RadiusScan (self, scanrange, scen, scfr);
+	}
+	scen = TF_FLARE_LIT;
+	scfr = TF_FLARE_LIT;
+	makevectors (self.v_angle);
+	while (list)
+	{
+		any_detected = TF_FLARE_OFF;
+		if ((self.tf_items_flags & BOT_MOVING))
+		{
+			if ((vlen (list.velocity) > 50))
+			{
+				if ((((list.team_no > TF_FLARE_LIT) && (self.team_no > TF_FLARE_LIT)) && (list.team_no == self.team_no)))
+				{
+					scfr = (scfr + TF_FLARE_OFF);
+					enemy_detected = TF_FLARE_LIT;
+				}
+				else
+				{
+					scen = (scen + TF_FLARE_OFF);
+					enemy_detected = TF_FLARE_OFF;
+				}
+			}
+			else
+			{
+				any_detected = TF_FLARE_LIT;
+			}
+		}
+		else
+		{
+			if ((((list.team_no > TF_FLARE_LIT) && (self.team_no > TF_FLARE_LIT)) && (list.team_no == self.team_no)))
+			{
+				scfr = (scfr + TF_FLARE_OFF);
+				enemy_detected = TF_FLARE_LIT;
+			}
+			else
+			{
+				scen = (scen + TF_FLARE_OFF);
+				enemy_detected = TF_FLARE_OFF;
+			}
+		}
+		if (any_detected)
+		{
+			lightningvec = normalize ((list.origin - self.origin));
+			lightningvec = (lightningvec * (vlen ((list.origin - self.origin)) / BOT_AI_GRAPPLE));
+			lightningvec = (lightningvec + self.origin);
+			msg_entity = self;
+			WriteByte (TF_FLARE_OFF, 23);
+			WriteByte (TF_FLARE_OFF, BOT_AI_GRAPPLE);
+			WriteEntity (TF_FLARE_OFF, self);
+			WriteCoord (TF_FLARE_OFF, self.origin_x);
+			WriteCoord (TF_FLARE_OFF, self.origin_y);
+			WriteCoord (TF_FLARE_OFF, (self.origin_z + BOT_DEFEND));
+			WriteCoord (TF_FLARE_OFF, lightningvec_x);
+			WriteCoord (TF_FLARE_OFF, lightningvec_y);
+			WriteCoord (TF_FLARE_OFF, (lightningvec_z + BOT_DEFEND));
+		}
+		list = list.linked_list;
+	}
+	if (((scen == TF_FLARE_LIT) && (scfr == TF_FLARE_LIT)))
+	{
+		sprint (self, BOT_FIGHTING, "No blips.\n");
+		return;
+	}
+	W_SetCurrentAmmo ();
+	return;
+};
+
+void (entity inflictor, entity attacker, float bounce, entity ignore) T_RadiusBounce =
+{
+	local float points;
+	local entity head;
+	local entity te;
+	local vector org;
+	local string st;
+
+	head = findradius (inflictor.origin, (bounce + 40));
+	while (head)
+	{
+		if ((head != ignore))
+		{
+			if (head.takedamage)
+			{
+				org = (head.origin + ((head.mins + head.maxs) * 0.5));
+				points = (0.5 * vlen ((org - inflictor.origin)));
+				if ((points < TF_FLARE_LIT))
+				{
+					points = TF_FLARE_LIT;
+				}
+				points = (bounce - points);
+				if ((((head.classname != "building_sentrygun") && (head.classname != "building_sentrygun_base")) && (points > TF_FLARE_LIT)))
+				{
+					head.velocity = (org - inflictor.origin);
+					head.velocity = (head.velocity * (points / 20));
+					if ((head.classname != "player"))
+					{
+						if ((head.flags & FL_ONGROUND))
+						{
+							head.flags = (head.flags - FL_ONGROUND);
+						}
+					}
+					else
+					{
+						te = find (world, classname, "timer");
+						while ((((te.owner != head) || (te.think != ConcussionGrenadeTimer)) && (te != world)))
+						{
+							te = find (te, classname, "timer");
+						}
+						if ((te != world))
+						{
+							stuffcmd (head, "v_idlescale 100\n");
+							te.health = 100;
+							te.nextthink = (time + BOT_AI_GRAPPLE);
+						}
+						else
+						{
+							stuffcmd (head, "v_idlescale 100\n");
+							stuffcmd (head, "bf\n");
+							te = spawn ();
+							te.nextthink = (time + BOT_AI_GRAPPLE);
+							te.think = ConcussionGrenadeTimer;
+							te.team_no = attacker.team_no;
+							te.classname = "timer";
+							te.owner = head;
+							te.health = 100;
+						}
+					}
+				}
+			}
+		}
+		head = head.chain;
+	}
+};
+
+entity (entity scanner, float scanrange, float enemies, float friends) T_RadiusScan =
+{
+	local entity head;
+	local entity list_head;
+	local entity list;
+	local float gotatarget;
+
+	head = findradius (scanner.origin, (scanrange + 40));
+	while (head)
+	{
+		gotatarget = TF_FLARE_LIT;
+		if ((head != scanner))
+		{
+			if (head.takedamage)
+			{
+				if (((head.classname == "player") && (friends || enemies)))
+				{
+					if (teamplay)
+					{
+						if ((((friends && (head.team_no > TF_FLARE_LIT)) && (scanner.team_no > TF_FLARE_LIT)) && (head.team_no == scanner.team_no)))
+						{
+							gotatarget = TF_FLARE_OFF;
+						}
+						if ((((enemies && (head.team_no > TF_FLARE_LIT)) && (scanner.team_no > TF_FLARE_LIT)) && (head.team_no != scanner.team_no)))
+						{
+							gotatarget = TF_FLARE_OFF;
+						}
+					}
+					else
+					{
+						gotatarget = TF_FLARE_OFF;
+					}
+				}
+			}
+		}
+		if (gotatarget)
+		{
+			if (list)
+			{
+				list.linked_list = head;
+				list = list.linked_list;
+			}
+			else
+			{
+				list_head = head;
+				list = head;
+			}
+		}
+		head = head.chain;
+	}
+	return (list_head);
+};

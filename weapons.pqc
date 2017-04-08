@@ -1,0 +1,3560 @@
+void () player_run;
+void () TeamFortress_DisplayDetectionItems;
+float (vector veca, vector vecb) crossproduct;
+void (vector org, float damage) SpawnBlood;
+void (entity rhook) Reset_Grapple;
+void () SuperDamageSound;
+void () ConcussionGrenadeTimer;
+void () W_PrintWeaponMessage;
+void () button_touch;
+void () button_fire;
+void () TeamFortress_DisplayLegalClasses;
+void () TeamFortress_Inventory;
+void () TeamFortress_SaveMe;
+void () TeamFortress_ID;
+void () TeamFortress_ShowTF;
+void () TeamFortress_SniperWeapon;
+void () TeamFortress_AssaultWeapon;
+void () TeamFortress_IncendiaryCannon;
+void () TeamFortress_FlameThrower;
+void () TeamFortress_PrimeGrenade;
+void () TeamFortress_ThrowGrenade;
+void () TeamFortress_Discard;
+void () TeamFortress_DetonatePipebombs;
+void () PipebombTouch;
+void () TeamFortress_DetpackStop;
+void () SniperSight_Create;
+void (float zoom_level) TF_zoom;
+void () TeamFortress_ReloadCurrentWeapon;
+void () TeamFortress_AutoZoomToggle;
+void () TeamFortress_StatusQuery;
+void () TeamFortress_SpyGoUndercover;
+void () TeamFortress_EngineerBuild;
+void () DropKey;
+void () UseSpecialSkill;
+void (float scanrange) TeamFortress_Scan;
+void (float timer) TeamFortress_SetDetpack;
+void (float all) TeamFortress_TeamShowScores;
+void (entity Player) TeamFortress_TeamShowMemberClasses;
+void () CamLock;
+void () CamDistLock;
+void () CamVecLock;
+void () CamAngleLock;
+void () CamRevAngleLock;
+void () CamProjectileLock;
+void () CamProjectileZoom;
+void () CamProjectileLockOn;
+void () CamProjectileLockOff;
+void () CamOffset;
+void () CamDrop;
+void () fadetoblack;
+void () fadefromblack;
+void () fadetowhite;
+void () fadefromwhite;
+void (entity disp) Engineer_UseDispenser;
+void (entity gun) Engineer_UseSentryGun;
+void (entity mortar) Engineer_UseMortar;
+void () TeamFortress_MOTD;
+void () TeamFortress_HelpMap;
+void (float res) StatusRes;
+void () BioInfection_Decay;
+void () BioInfection_MonsterDecay;
+void () W_FireFlame;
+void () W_FireIncendiaryCannon;
+void () W_FireTranq;
+void () W_FireLaser;
+void () HallucinationTimer;
+void () TranquiliserTimer;
+void () TeamFortress_CTF_FlagInfo;
+void () TF_MovePlayer;
+
+void () W_Precache =
+{
+	precache_sound ("weapons/r_exp3.wav");
+	precache_sound ("weapons/rocket1i.wav");
+	precache_sound ("weapons/sgun1.wav");
+	precache_sound ("weapons/guncock.wav");
+	precache_sound ("weapons/ric1.wav");
+	precache_sound ("weapons/ric2.wav");
+	precache_sound ("weapons/ric3.wav");
+	precache_sound ("weapons/spike2.wav");
+	precache_sound ("weapons/tink1.wav");
+	precache_sound ("weapons/grenade.wav");
+	precache_sound ("weapons/bounce.wav");
+	precache_sound ("weapons/shotgn2.wav");
+	precache_sound ("wizard/wattack.wav");
+	precache_sound ("items/r_item1.wav");
+	precache_sound ("items/r_item2.wav");
+	precache_model ("progs/flame2.mdl");
+	precache_sound ("ambience/fire1.wav");
+	precache_sound2 ("blob/land1.wav");
+	precache_model2 ("progs/v_spike.mdl");
+	precache_sound ("hknight/hit.wav");
+	precache_sound ("weapons/turrset.wav");
+	precache_sound ("weapons/turrspot.wav");
+	precache_sound ("weapons/turridle.wav");
+	precache_sound ("weapons/sniper.wav");
+	precache_sound ("weapons/flmfire2.wav");
+	precache_sound ("weapons/flmgrexp.wav");
+	precache_sound ("misc/vapeur2.wav");
+	precache_sound ("weapons/asscan1.wav");
+	precache_sound ("weapons/asscan2.wav");
+	precache_sound ("weapons/asscan3.wav");
+	precache_sound ("weapons/railgun.wav");
+	precache_sound ("weapons/dartgun.wav");
+};
+
+float () crandom =
+{
+	return ((BOT_FIGHTING * (random () - 0.5)));
+};
+
+void (float att_delay) Attack_Finished =
+{
+	if ((self.tfstate & 32768))
+	{
+		self.attack_finished = (time + (att_delay * 1.5));
+	}
+	else
+	{
+		self.attack_finished = (time + att_delay);
+	}
+};
+
+void () W_FireAxe =
+{
+	local vector source;
+	local vector org;
+	local vector def;
+
+	makevectors (self.v_angle);
+	source = (self.origin + '0 0 16');
+	traceline (source, (source + (v_forward * 64)), TF_FLARE_LIT, self);
+	if ((trace_fraction == TF_FLARE_OFF))
+	{
+		return;
+	}
+	org = (trace_endpos - (v_forward * BOT_MOVING));
+	if (trace_ent.takedamage)
+	{
+		trace_ent.axhitme = TF_FLARE_OFF;
+		SpawnBlood (org, 20);
+		if (((self.playerclass != BOT_DEFEND) || (trace_ent.classname != "player")))
+		{
+			deathmsg = 17;
+			TF_T_Damage (trace_ent, self, self, 20, BOT_FIGHTING, TF_FLARE_LIT);
+		}
+		else
+		{
+			self.weaponmode = TF_FLARE_OFF;
+			self.weaponmodel = "progs/v_knife2.mdl";
+			makevectors (trace_ent.v_angle);
+			def = v_right;
+			makevectors (self.v_angle);
+			if ((crossproduct (def, v_forward) > TF_FLARE_LIT))
+			{
+				deathmsg = 22;
+				TF_T_Damage (trace_ent, self, self, 120, BOT_FIGHTING, TF_FLARE_LIT);
+			}
+			else
+			{
+				deathmsg = 17;
+				TF_T_Damage (trace_ent, self, self, 40, BOT_FIGHTING, TF_FLARE_LIT);
+			}
+		}
+	}
+	else
+	{
+		sound (self, TF_FLARE_OFF, "player/axhit2.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+		WriteByte (BOT_MOVING, 23);
+		WriteByte (BOT_MOVING, BOT_FIGHTING);
+		WriteByte (BOT_MOVING, BOT_AI_FOLLOW);
+		WriteCoord (BOT_MOVING, org_x);
+		WriteCoord (BOT_MOVING, org_y);
+		WriteCoord (BOT_MOVING, org_z);
+		multicast (org, BOT_FIGHTING);
+	}
+};
+
+void () W_FireSpanner =
+{
+	local vector source;
+	local vector org;
+	local vector def;
+	local float healam;
+	local entity te;
+
+	makevectors (self.v_angle);
+	source = (self.origin + '0 0 16');
+	traceline (source, (source + (v_forward * 64)), TF_FLARE_LIT, self);
+	if ((trace_fraction == TF_FLARE_OFF))
+	{
+		return;
+	}
+	org = (trace_endpos - (v_forward * BOT_MOVING));
+	if ((trace_ent.goal_activation & BOT_DEFEND))
+	{
+		if (Activated (trace_ent, self))
+		{
+			DoResults (trace_ent, self, TF_FLARE_OFF);
+			if ((trace_ent.classname == "func_button"))
+			{
+				trace_ent.enemy = self;
+				other = self;
+				self = trace_ent;
+				self.dont_do_triggerwork = TF_FLARE_OFF;
+				button_fire ();
+				self = other;
+			}
+		}
+		else
+		{
+			if ((trace_ent.else_goal != TF_FLARE_LIT))
+			{
+				te = Findgoal (trace_ent.else_goal);
+				if (te)
+				{
+					DoResults (te, self, (trace_ent.goal_result & BOT_FIGHTING));
+				}
+			}
+			else
+			{
+				sound (self, TF_FLARE_OFF, "player/axhit2.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+				WriteByte (BOT_MOVING, 23);
+				WriteByte (BOT_MOVING, BOT_FIGHTING);
+				WriteByte (BOT_MOVING, BOT_AI_FOLLOW);
+				WriteCoord (BOT_MOVING, org_x);
+				WriteCoord (BOT_MOVING, org_y);
+				WriteCoord (BOT_MOVING, org_z);
+				multicast (org, BOT_FIGHTING);
+			}
+		}
+		return;
+	}
+	if (trace_ent.takedamage)
+	{
+		if ((trace_ent.classname == "building_dispenser"))
+		{
+			Engineer_UseDispenser (trace_ent);
+			return;
+		}
+		else
+		{
+			if ((trace_ent.classname == "building_sentrygun"))
+			{
+				Engineer_UseSentryGun (trace_ent);
+				return;
+			}
+			else
+			{
+				if ((trace_ent.classname == "building_sentrygun_base"))
+				{
+					if (trace_ent.oldenemy)
+					{
+						Engineer_UseSentryGun (trace_ent.oldenemy);
+					}
+					return;
+				}
+				else
+				{
+					if ((trace_ent.classname == "building_mortar"))
+					{
+						Engineer_UseMortar (trace_ent);
+						return;
+					}
+					else
+					{
+						if ((trace_ent.classname == "player"))
+						{
+							if (((((trace_ent.team_no == self.team_no) && (self.team_no != TF_FLARE_LIT)) && teamplay) || coop))
+							{
+								healam = BOT_AI_SCOUT;
+								if ((self.ammo_cells < healam))
+								{
+									healam = self.ammo_cells;
+								}
+								if ((trace_ent.armortype == TF_FLARE_LIT))
+								{
+									return;
+								}
+								if (((trace_ent.maxarmor - trace_ent.armorvalue) < (healam * BOT_MOVING)))
+								{
+									healam = ceil (((trace_ent.maxarmor - trace_ent.armorvalue) / BOT_MOVING));
+								}
+								if ((healam > TF_FLARE_LIT))
+								{
+									trace_ent.armorvalue = (trace_ent.armorvalue + (healam * BOT_MOVING));
+									if ((trace_ent.armorvalue > trace_ent.maxarmor))
+									{
+										trace_ent.armorvalue = trace_ent.maxarmor;
+									}
+									self.ammo_cells = (self.ammo_cells - healam);
+									sound (trace_ent, TF_FLARE_OFF, "items/r_item1.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+									WriteByte (BOT_MOVING, 23);
+									WriteByte (BOT_MOVING, BOT_FIGHTING);
+									WriteByte (BOT_MOVING, BOT_AI_FOLLOW);
+									WriteCoord (BOT_MOVING, org_x);
+									WriteCoord (BOT_MOVING, org_y);
+									WriteCoord (BOT_MOVING, org_z);
+									multicast (org, BOT_FIGHTING);
+									W_SetCurrentAmmo ();
+								}
+								return;
+							}
+						}
+						trace_ent.axhitme = TF_FLARE_OFF;
+						SpawnBlood (org, 20);
+						deathmsg = BOT_AVOIDING_HAZARD;
+						TF_T_Damage (trace_ent, self, self, 20, BOT_FIGHTING, TF_FLARE_LIT);
+					}
+				}
+			}
+		}
+	}
+	else
+	{
+		sound (self, TF_FLARE_OFF, "player/axhit2.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+		WriteByte (BOT_MOVING, 23);
+		WriteByte (BOT_MOVING, BOT_FIGHTING);
+		WriteByte (BOT_MOVING, BOT_AI_FOLLOW);
+		WriteCoord (BOT_MOVING, org_x);
+		WriteCoord (BOT_MOVING, org_y);
+		WriteCoord (BOT_MOVING, org_z);
+		multicast (org, BOT_FIGHTING);
+	}
+};
+
+void () W_FireMedikit =
+{
+	local vector source;
+	local vector org;
+	local float healam;
+	local entity te;
+	local entity BioInfection;
+
+	source = (self.origin + '0 0 16');
+	traceline (source, (source + (v_forward * 64)), TF_FLARE_LIT, self);
+	if ((trace_fraction == TF_FLARE_OFF))
+	{
+		return;
+	}
+	org = (trace_endpos - (v_forward * BOT_MOVING));
+	if (trace_ent.takedamage)
+	{
+		if ((trace_ent.classname == "player"))
+		{
+			if ((((trace_ent.team_no == self.team_no) && (self.team_no != TF_FLARE_LIT)) || coop))
+			{
+				healam = BOT_IMPULSE;
+				te = find (world, classname, "timer");
+				while ((((te.owner != trace_ent) || (te.think != ConcussionGrenadeTimer)) && (te != world)))
+				{
+					te = find (te, classname, "timer");
+				}
+				if ((te != world))
+				{
+					stuffcmd (trace_ent, "v_idlescale 0\n");
+					SpawnBlood (org, 20);
+					sprint (trace_ent, BOT_FIGHTING, "you have been healed of your concussion\n");
+					if ((te.team_no != self.team_no))
+					{
+						self.real_frags = (self.real_frags + TF_FLARE_OFF);
+						if (!(toggleflags & 128))
+						{
+							self.frags = self.real_frags;
+						}
+					}
+					dremove (te);
+				}
+				if ((trace_ent.tfstate & 16384))
+				{
+					te = find (world, classname, "timer");
+					while ((((te.owner != trace_ent) || (te.think != HallucinationTimer)) && (te != world)))
+					{
+						te = find (te, classname, "timer");
+					}
+					if ((te != world))
+					{
+						trace_ent.tfstate = (trace_ent.tfstate - (trace_ent.tfstate & 16384));
+						SpawnBlood (org, 20);
+						sprint (trace_ent, BOT_FIGHTING, "you have been healed of your hallucinations\n");
+						if ((te.team_no != self.team_no))
+						{
+							self.real_frags = (self.real_frags + TF_FLARE_OFF);
+							if (!(toggleflags & 128))
+							{
+								self.frags = self.real_frags;
+							}
+						}
+						dremove (te);
+					}
+					else
+					{
+						dprint ("Warning: Error in Hallucination Timer logic.\n");
+					}
+				}
+				if ((trace_ent.tfstate & 32768))
+				{
+					te = find (world, classname, "timer");
+					while ((((te.owner != trace_ent) || (te.think != TranquiliserTimer)) && (te != world)))
+					{
+						te = find (te, classname, "timer");
+					}
+					if ((te != world))
+					{
+						trace_ent.tfstate = (trace_ent.tfstate - (trace_ent.tfstate & 32768));
+						TeamFortress_SetSpeed (trace_ent);
+						SpawnBlood (org, 20);
+						sprint (trace_ent, BOT_FIGHTING, "you have been healed of your tranquilisation\n");
+						if ((te.team_no != self.team_no))
+						{
+							self.real_frags = (self.real_frags + TF_FLARE_OFF);
+							if (!(toggleflags & 128))
+							{
+								self.frags = self.real_frags;
+							}
+						}
+						dremove (te);
+					}
+					else
+					{
+						dprint ("Warning: Error in Tranquilisation Timer logic.\n");
+					}
+				}
+				if ((trace_ent.FlashTime > TF_FLARE_LIT))
+				{
+					te = find (world, netname, "flashtimer");
+					while ((((te.owner != trace_ent) || (te.classname != "timer")) && (te != world)))
+					{
+						te = find (te, netname, "flashtimer");
+					}
+					if ((te != world))
+					{
+						trace_ent.FlashTime = TF_FLARE_LIT;
+						SpawnBlood (org, 20);
+						if ((te.team_no != self.team_no))
+						{
+							self.real_frags = (self.real_frags + TF_FLARE_OFF);
+							if (!(toggleflags & 128))
+							{
+								self.frags = self.real_frags;
+							}
+						}
+						dremove (te);
+					}
+					else
+					{
+						dprint ("Warning: Error in Flash Timer logic.\n");
+						trace_ent.FlashTime = TF_FLARE_LIT;
+					}
+				}
+				if ((trace_ent.tfstate & BOT_RESUPPLYING))
+				{
+					healam = rint ((trace_ent.health / BOT_FIGHTING));
+					trace_ent.tfstate = (trace_ent.tfstate - (trace_ent.tfstate & BOT_RESUPPLYING));
+					deathmsg = 23;
+					T_Damage (trace_ent, self, self, healam);
+					SpawnBlood (org, 30);
+					sprint (trace_ent, BOT_FIGHTING, "Your infection is cured!\n");
+					if ((self.classname == "player"))
+					{
+						sprint (self, BOT_FIGHTING, "You have healed ");
+						sprint (self, BOT_FIGHTING, trace_ent.netname);
+						sprint (self, BOT_FIGHTING, " of the infection.\n");
+						if ((trace_ent.infection_team_no != self.team_no))
+						{
+							self.real_frags = (self.real_frags + TF_FLARE_OFF);
+							if (!(toggleflags & 128))
+							{
+								self.frags = self.real_frags;
+							}
+						}
+					}
+					return;
+				}
+				if ((trace_ent.numflames > TF_FLARE_LIT))
+				{
+					sound (trace_ent, TF_FLARE_OFF, "items/r_item1.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+					trace_ent.numflames = TF_FLARE_LIT;
+					sprint (trace_ent, BOT_FIGHTING, "The flames have been doused!\n");
+					if ((self.classname == "player"))
+					{
+						sprint (self, TF_FLARE_OFF, "You have put out ");
+						sprint (self, TF_FLARE_OFF, trace_ent.netname);
+						sprint (self, TF_FLARE_OFF, "'s fire.\n");
+					}
+					return;
+				}
+				if (((healam > TF_FLARE_LIT) && (trace_ent.health < trace_ent.max_health)))
+				{
+					sound (trace_ent, TF_FLARE_OFF, "items/r_item1.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+					trace_ent.axhitme = TF_FLARE_OFF;
+					SpawnBlood (org, 20);
+					T_Heal (trace_ent, healam, TF_FLARE_LIT);
+				}
+				else
+				{
+					if (((trace_ent.health >= trace_ent.max_health) && (trace_ent.health < (trace_ent.max_health + 50))))
+					{
+						healam = BOT_AI_GRAPPLE;
+						if ((healam > (self.ammo_medikit * BOT_AI_GRAPPLE)))
+						{
+							healam = (self.ammo_medikit * BOT_AI_GRAPPLE);
+						}
+						if ((healam > TF_FLARE_LIT))
+						{
+							sound (trace_ent, BOT_AI_FOLLOW, "items/r_item2.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+							T_Heal (trace_ent, healam, TF_FLARE_OFF);
+							self.ammo_medikit = (self.ammo_medikit - rint ((healam / BOT_AI_GRAPPLE)));
+							if (!(trace_ent.items & 65536))
+							{
+								trace_ent.items = (trace_ent.items | 65536);
+								newmis = spawn ();
+								newmis.nextthink = (time + BOT_AI_GRAPPLE);
+								newmis.think = item_megahealth_rot;
+								newmis.owner = trace_ent;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	else
+	{
+		sound (self, TF_FLARE_OFF, "player/axhit2.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+		WriteByte (BOT_MOVING, 23);
+		WriteByte (BOT_MOVING, BOT_FIGHTING);
+		WriteByte (BOT_MOVING, BOT_AI_FOLLOW);
+		WriteCoord (BOT_MOVING, org_x);
+		WriteCoord (BOT_MOVING, org_y);
+		WriteCoord (BOT_MOVING, org_z);
+		multicast (org, BOT_FIGHTING);
+	}
+};
+
+void () W_FireBioweapon =
+{
+	local vector source;
+	local vector org;
+	local float healam;
+	local entity BioInfection;
+
+	source = (self.origin + '0 0 16');
+	traceline (source, (source + (v_forward * 64)), TF_FLARE_LIT, self);
+	if ((trace_fraction == TF_FLARE_OFF))
+	{
+		return;
+	}
+	org = (trace_endpos - (v_forward * BOT_MOVING));
+	if (trace_ent.takedamage)
+	{
+		if ((trace_ent.classname == "player"))
+		{
+			if (((((trace_ent.team_no != self.team_no) && (self.team_no != TF_FLARE_LIT)) && teamplay) || (teamplay == TF_FLARE_LIT)))
+			{
+				trace_ent.axhitme = TF_FLARE_OFF;
+				SpawnBlood (org, 20);
+				deathmsg = 14;
+				T_Damage (trace_ent, self, self, BOT_AI_SCOUT);
+				if ((trace_ent.playerclass == BOT_AI_GRAPPLE))
+				{
+					return;
+				}
+				trace_ent.tfstate = (trace_ent.tfstate | BOT_RESUPPLYING);
+				BioInfection = spawn ();
+				BioInfection.classname = "timer";
+				BioInfection.owner = trace_ent;
+				BioInfection.nextthink = (time + BOT_FIGHTING);
+				BioInfection.think = BioInfection_Decay;
+				BioInfection.enemy = self;
+				trace_ent.infection_team_no = self.team_no;
+			}
+		}
+		else
+		{
+			if ((trace_ent.flags & BOT_AVOIDING_HAZARD))
+			{
+				if ((trace_ent.classname == "monster_zombie"))
+				{
+					T_Damage (trace_ent, self, self, BOT_IMPULSE);
+				}
+				trace_ent.axhitme = TF_FLARE_OFF;
+				SpawnBlood (org, 20);
+				T_Damage (trace_ent, self, self, BOT_AI_SCOUT);
+				BioInfection = spawn ();
+				BioInfection.classname = "timer";
+				BioInfection.nextthink = (time + BOT_FIGHTING);
+				BioInfection.think = BioInfection_MonsterDecay;
+				BioInfection.owner = self;
+				BioInfection.enemy = trace_ent;
+			}
+			else
+			{
+				trace_ent.axhitme = TF_FLARE_OFF;
+				SpawnBlood (org, 30);
+				T_Damage (trace_ent, self, self, 40);
+			}
+		}
+	}
+	else
+	{
+		sound (self, TF_FLARE_OFF, "player/axhit2.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+		WriteByte (BOT_MOVING, 23);
+		WriteByte (BOT_MOVING, BOT_FIGHTING);
+		WriteByte (BOT_MOVING, BOT_AI_FOLLOW);
+		WriteCoord (BOT_MOVING, org_x);
+		WriteCoord (BOT_MOVING, org_y);
+		WriteCoord (BOT_MOVING, org_z);
+		multicast (org, BOT_FIGHTING);
+	}
+};
+
+vector () wall_velocity =
+{
+	local vector vel;
+
+	vel = normalize (self.velocity);
+	vel = normalize (((vel + (v_up * (random () - 0.5))) + (v_right * (random () - 0.5))));
+	vel = (vel + (BOT_FIGHTING * trace_plane_normal));
+	vel = (vel * BOT_IMPULSE);
+	return (vel);
+};
+
+void (vector org, vector vel) SpawnMeatSpray =
+{
+	local entity missile;
+
+	missile = spawn ();
+	missile.owner = self;
+	missile.movetype = BOT_AI_SCOUT;
+	missile.solid = TF_FLARE_LIT;
+	makevectors (self.angles);
+	missile.velocity = vel;
+	missile.velocity_z = ((missile.velocity_z + 250) + (50 * random ()));
+	missile.avelocity = '3000 1000 2000';
+	missile.nextthink = (time + TF_FLARE_OFF);
+	missile.think = SUB_Remove;
+	setmodel (missile, "progs/zom_gib.mdl");
+	setsize (missile, '0 0 0', '0 0 0');
+	setorigin (missile, org);
+};
+
+void (vector org, float damage) SpawnBlood =
+{
+	WriteByte (BOT_MOVING, 23);
+	WriteByte (BOT_MOVING, 12);
+	WriteByte (BOT_MOVING, TF_FLARE_OFF);
+	WriteCoord (BOT_MOVING, org_x);
+	WriteCoord (BOT_MOVING, org_y);
+	WriteCoord (BOT_MOVING, org_z);
+	multicast (org, BOT_FIGHTING);
+};
+
+void (float damage) spawn_touchblood =
+{
+	local vector vel;
+
+	vel = (wall_velocity () * 0.2);
+	SpawnBlood ((self.origin + (vel * 0.01)), damage);
+};
+
+void (vector org, vector vel) SpawnChunk =
+{
+	particle (org, (vel * 0.02), TF_FLARE_LIT, BOT_AI_SCOUT);
+};
+entity multi_ent;
+float multi_damage;
+vector blood_org;
+float blood_count;
+vector puff_org;
+float puff_count;
+
+void () ClearMultiDamage =
+{
+	multi_ent = world;
+	multi_damage = TF_FLARE_LIT;
+	blood_count = TF_FLARE_LIT;
+	puff_count = TF_FLARE_LIT;
+};
+
+void () ApplyMultiDamage =
+{
+	if (!multi_ent)
+	{
+		return;
+	}
+	TF_T_Damage (multi_ent, self, self, multi_damage, BOT_FIGHTING, TF_FLARE_OFF);
+};
+
+void (entity hit, float damage) AddMultiDamage =
+{
+	if (!hit)
+	{
+		return;
+	}
+	if ((hit != multi_ent))
+	{
+		ApplyMultiDamage ();
+		multi_damage = damage;
+		multi_ent = hit;
+	}
+	else
+	{
+		multi_damage = (multi_damage + damage);
+	}
+};
+
+void () Multi_Finish =
+{
+	if (puff_count)
+	{
+		WriteByte (BOT_MOVING, 23);
+		WriteByte (BOT_MOVING, BOT_FIGHTING);
+		WriteByte (BOT_MOVING, puff_count);
+		WriteCoord (BOT_MOVING, puff_org_x);
+		WriteCoord (BOT_MOVING, puff_org_y);
+		WriteCoord (BOT_MOVING, puff_org_z);
+		multicast (puff_org, BOT_FIGHTING);
+	}
+	if (blood_count)
+	{
+		WriteByte (BOT_MOVING, 23);
+		WriteByte (BOT_MOVING, 12);
+		WriteByte (BOT_MOVING, blood_count);
+		WriteCoord (BOT_MOVING, blood_org_x);
+		WriteCoord (BOT_MOVING, blood_org_y);
+		WriteCoord (BOT_MOVING, blood_org_z);
+		multicast (puff_org, BOT_FIGHTING);
+	}
+};
+
+void (float damage, vector dir) TraceAttack =
+{
+	local vector vel;
+	local vector org;
+
+	vel = normalize (((dir + (v_up * crandom ())) + (v_right * crandom ())));
+	vel = (vel + (BOT_FIGHTING * trace_plane_normal));
+	vel = (vel * BOT_IMPULSE);
+	org = (trace_endpos - (dir * BOT_MOVING));
+	if (trace_ent.takedamage)
+	{
+		blood_count = (blood_count + TF_FLARE_OFF);
+		blood_org = org;
+		AddMultiDamage (trace_ent, damage);
+	}
+	else
+	{
+		puff_count = (puff_count + TF_FLARE_OFF);
+	}
+};
+
+void (float shotcount, vector dir, vector spread) FireBullets =
+{
+	local vector direction;
+	local vector src;
+
+	makevectors (self.v_angle);
+	src = (self.origin + (v_forward * BOT_AI_SCOUT));
+	src_z = (self.absmin_z + (self.size_z * 0.7));
+	ClearMultiDamage ();
+	traceline (src, (src + (dir * FL_WATERJUMP)), TF_FLARE_LIT, self);
+	puff_org = (trace_endpos - (dir * BOT_MOVING));
+	while ((shotcount > TF_FLARE_LIT))
+	{
+		direction = ((dir + ((crandom () * spread_x) * v_right)) + ((crandom () * spread_y) * v_up));
+		traceline (src, (src + (direction * FL_WATERJUMP)), TF_FLARE_LIT, self);
+		if ((trace_fraction != TF_FLARE_OFF))
+		{
+			if ((self.weapon != 32768))
+			{
+				TraceAttack (BOT_MOVING, direction);
+			}
+			else
+			{
+				TraceAttack (BOT_AI_FLAGRUN, direction);
+			}
+		}
+		shotcount = (shotcount - TF_FLARE_OFF);
+	}
+	ApplyMultiDamage ();
+	Multi_Finish ();
+};
+
+void () W_FireShotgun =
+{
+	local vector dir;
+
+	sound (self, TF_FLARE_OFF, "weapons/guncock.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+	KickPlayer (-2, self);
+	self.ammo_shells = (self.ammo_shells - TF_FLARE_OFF);
+	self.currentammo = (self.ammo_shells - TF_FLARE_OFF);
+	dir = aim (self, 100000);
+	deathmsg = TF_FLARE_OFF;
+	FireBullets (BOT_AI_FLEE, dir, '0.04 0.04 0');
+};
+
+void () W_FireSuperShotgun =
+{
+	local vector dir;
+
+	if ((self.currentammo == TF_FLARE_OFF))
+	{
+		W_FireShotgun ();
+		return;
+	}
+	sound (self, TF_FLARE_OFF, "weapons/shotgn2.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+	KickPlayer (-4, self);
+	self.ammo_shells = (self.ammo_shells - BOT_FIGHTING);
+	self.currentammo = (self.ammo_shells - BOT_FIGHTING);
+	dir = aim (self, 100000);
+	deathmsg = BOT_FIGHTING;
+	FireBullets (14, dir, '0.14 0.08 0');
+};
+
+void (vector direction, float damage) FireSniperBullet =
+{
+	local vector src;
+
+	makevectors (self.v_angle);
+	src = (self.origin + (v_forward * BOT_AI_SCOUT));
+	src_z = (self.absmin_z + (self.size_z * 0.7));
+	ClearMultiDamage ();
+	traceline (src, (src + (direction * 4096)), TF_FLARE_LIT, self);
+	if ((trace_fraction != TF_FLARE_OFF))
+	{
+		TraceAttack (damage, direction);
+	}
+	ApplyMultiDamage ();
+};
+
+void () W_FireSniperRifle =
+{
+	local vector dir;
+	local vector src;
+	local float dam_mult;
+	local float zdif;
+	local float use_this;
+	local float x;
+	local vector f;
+	local vector g;
+	local vector h;
+
+	sound (self, TF_FLARE_OFF, "weapons/sniper.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+	KickPlayer (-2, self);
+	self.ammo_shells = (self.ammo_shells - TF_FLARE_OFF);
+	self.currentammo = (self.ammo_shells - TF_FLARE_OFF);
+	makevectors (self.v_angle);
+	src = (self.origin + (v_forward * BOT_AI_SCOUT));
+	src_z = (self.absmin_z + (self.size_z * 0.7));
+	use_this = TF_FLARE_LIT;
+	traceline (src, (src + (dir * 8092)), TF_FLARE_LIT, self);
+	if ((trace_fraction != TF_FLARE_OFF))
+	{
+		if ((trace_ent != world))
+		{
+			if ((trace_ent.classname == "player"))
+			{
+				use_this = TF_FLARE_OFF;
+			}
+		}
+	}
+	KickPlayer (-4, self);
+	if (!use_this)
+	{
+		dir = aim (self, 10000);
+		traceline (src, (src + (dir * 3072)), TF_FLARE_LIT, self);
+	}
+	deathmsg = 18;
+	dam_mult = TF_FLARE_OFF;
+	if (trace_ent)
+	{
+		if ((trace_ent.classname == "player"))
+		{
+			f = (trace_endpos - src);
+			g_x = trace_endpos_x;
+			g_y = trace_endpos_y;
+			g_z = TF_FLARE_LIT;
+			h_x = trace_ent.origin_x;
+			h_y = trace_ent.origin_y;
+			h_z = TF_FLARE_LIT;
+			x = vlen ((g - h));
+			f = ((normalize (f) * x) + trace_endpos);
+			zdif = (f_z - trace_ent.origin_z);
+			deathmsg = 18;
+			trace_ent.head_shot_vector = '0 0 0';
+			if ((zdif < TF_FLARE_LIT))
+			{
+				dam_mult = 0.5;
+				trace_ent.leg_damage = (trace_ent.leg_damage + TF_FLARE_OFF);
+				TeamFortress_SetSpeed (trace_ent);
+				deathmsg = 28;
+				T_Damage (trace_ent, self, self, (self.heat * dam_mult));
+				if ((trace_ent.health > TF_FLARE_LIT))
+				{
+					sprint (trace_ent, TF_FLARE_LIT, "Leg injury!\n");
+					sprint (self, TF_FLARE_OFF, "Leg shot - that'll slow him down!\n");
+				}
+				return;
+			}
+			else
+			{
+				if ((zdif > 20))
+				{
+					dam_mult = BOT_FIGHTING;
+					stuffcmd (trace_ent, "bf\n");
+					trace_ent.head_shot_vector = (trace_ent.origin - self.origin);
+					deathmsg = 29;
+					T_Damage (trace_ent, self, self, (self.heat * dam_mult));
+					if ((trace_ent.health > TF_FLARE_LIT))
+					{
+						sprint (trace_ent, TF_FLARE_LIT, "Head injury!\n");
+						sprint (self, TF_FLARE_OFF, "Head shot - that's gotta hurt!\n");
+					}
+					return;
+				}
+				else
+				{
+					deathmsg = 18;
+				}
+			}
+		}
+	}
+	ClearMultiDamage ();
+	if ((trace_fraction != TF_FLARE_OFF))
+	{
+		TraceAttack ((self.heat * dam_mult), dir);
+	}
+	ApplyMultiDamage ();
+};
+
+void () W_FireAutoRifle =
+{
+	local vector dir;
+
+	sound (self, TF_FLARE_OFF, "weapons/sniper.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+	KickPlayer (CONTENT_EMPTY, self);
+	self.ammo_shells = (self.ammo_shells - TF_FLARE_OFF);
+	self.currentammo = (self.ammo_shells - TF_FLARE_OFF);
+	makevectors (self.v_angle);
+	dir = v_forward;
+	deathmsg = 19;
+	FireSniperBullet (dir, BOT_DEFEND);
+};
+
+void () W_FireAssaultCannon =
+{
+	local vector dir;
+
+	KickPlayer (-4, self);
+	self.ammo_shells = (self.ammo_shells - TF_FLARE_OFF);
+	self.currentammo = (self.ammo_shells - TF_FLARE_OFF);
+	dir = aim (self, 100000);
+	deathmsg = 20;
+	FireBullets (BOT_AI_GRAPPLE, dir, '0.04 0.04 0');
+};
+
+void () s_explode1 = [ 0, s_explode2 ]
+{
+};
+
+void () s_explode2 = [ 1, s_explode3 ]
+{
+};
+
+void () s_explode3 = [ 2, s_explode4 ]
+{
+};
+
+void () s_explode4 = [ 3, s_explode5 ]
+{
+};
+
+void () s_explode5 = [ 4, s_explode6 ]
+{
+};
+
+void () s_explode6 = [ 5, SUB_Remove ]
+{
+};
+
+void () BecomeExplosion =
+{
+	dremove (self);
+};
+
+void () T_MissileTouch =
+{
+	local float damg;
+
+	if ((pointcontents (self.origin) == -6))
+	{
+		dremove (self);
+		return;
+	}
+	damg = (92 + (random () * 20));
+	deathmsg = self.weapon;
+	if (other.health)
+	{
+		TF_T_Damage (other, self, self.owner, damg, TF_FLARE_LIT, BOT_MOVING);
+	}
+	T_RadiusDamage (self, self.owner, 92, other);
+	self.origin = (self.origin - (BOT_DEFEND * normalize (self.velocity)));
+	WriteByte (BOT_MOVING, 23);
+	WriteByte (BOT_MOVING, BOT_AI_FOLLOW);
+	WriteCoord (BOT_MOVING, self.origin_x);
+	WriteCoord (BOT_MOVING, self.origin_y);
+	WriteCoord (BOT_MOVING, self.origin_z);
+	multicast (self.origin, TF_FLARE_OFF);
+	dremove (self);
+};
+
+void () W_FireRocket =
+{
+	self.ammo_rockets = (self.ammo_rockets - TF_FLARE_OFF);
+	self.currentammo = (self.ammo_rockets - TF_FLARE_OFF);
+	sound (self, TF_FLARE_OFF, "weapons/sgun1.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+	KickPlayer (-2, self);
+	newmis = spawn ();
+	newmis.owner = self;
+	newmis.movetype = BOT_AI_FLAGRUN;
+	newmis.solid = BOT_FIGHTING;
+	makevectors (self.v_angle);
+	newmis.velocity = v_forward;
+	newmis.velocity = (newmis.velocity * 900);
+	newmis.angles = vectoangles (newmis.velocity);
+	newmis.classname = "rocket";
+	newmis.touch = T_MissileTouch;
+	newmis.nextthink = (time + BOT_AI_GRAPPLE);
+	newmis.think = SUB_Remove;
+	newmis.weapon = BOT_AI_FLEE;
+	setmodel (newmis, "progs/missile.mdl");
+	setsize (newmis, '0 0 0', '0 0 0');
+	setorigin (newmis, ((self.origin + (v_forward * BOT_DEFEND)) + '0 0 16'));
+};
+
+void (entity from, float damage) LightningHit =
+{
+	WriteByte (BOT_MOVING, 23);
+	WriteByte (BOT_MOVING, 13);
+	WriteCoord (BOT_MOVING, trace_endpos_x);
+	WriteCoord (BOT_MOVING, trace_endpos_y);
+	WriteCoord (BOT_MOVING, trace_endpos_z);
+	multicast (trace_endpos, BOT_FIGHTING);
+	TF_T_Damage (trace_ent, from, from, damage, BOT_FIGHTING, BOT_DEFEND);
+};
+
+void (vector p1, vector p2, entity from, float damage) LightningDamage =
+{
+	local entity e1;
+	local entity e2;
+	local vector f;
+
+	f = (p2 - p1);
+	normalize (f);
+	f_x = (TF_FLARE_LIT - f_y);
+	f_y = f_x;
+	f_z = TF_FLARE_LIT;
+	f = (f * BOT_RESUPPLYING);
+	e2 = world;
+	e1 = world;
+	traceline (p1, p2, TF_FLARE_LIT, self);
+	if (trace_ent.takedamage)
+	{
+		LightningHit (from, damage);
+		if ((self.classname == "player"))
+		{
+			if ((other.classname == "player"))
+			{
+				trace_ent.velocity_z = (trace_ent.velocity_z + 400);
+			}
+		}
+	}
+	e1 = trace_ent;
+	traceline ((p1 + f), (p2 + f), TF_FLARE_LIT, self);
+	if (((trace_ent != e1) && trace_ent.takedamage))
+	{
+		LightningHit (from, damage);
+	}
+	e2 = trace_ent;
+	traceline ((p1 - f), (p2 - f), TF_FLARE_LIT, self);
+	if ((((trace_ent != e1) && (trace_ent != e2)) && trace_ent.takedamage))
+	{
+		LightningHit (from, damage);
+	}
+};
+
+void () W_FireLightning =
+{
+	local vector org;
+	local float cells;
+
+	if ((self.ammo_cells < TF_FLARE_OFF))
+	{
+		self.current_weapon = W_BestWeapon ();
+		W_SetCurrentAmmo ();
+		W_PrintWeaponMessage ();
+		return;
+	}
+	if ((self.waterlevel > TF_FLARE_OFF))
+	{
+		cells = self.ammo_cells;
+		self.ammo_cells = TF_FLARE_LIT;
+		W_SetCurrentAmmo ();
+		deathmsg = BOT_AI_BLAST;
+		T_RadiusDamage (self, self, (35 * cells), world);
+		return;
+	}
+	if ((self.t_width < time))
+	{
+		sound (self, TF_FLARE_OFF, "weapons/lhit.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+		self.t_width = (time + 0.6);
+	}
+	KickPlayer (-2, self);
+	self.ammo_cells = (self.ammo_cells - TF_FLARE_OFF);
+	self.currentammo = (self.ammo_cells - TF_FLARE_OFF);
+	org = (self.origin + '0 0 16');
+	traceline (org, (org + (v_forward * 600)), TF_FLARE_OFF, self);
+	WriteByte (BOT_MOVING, 23);
+	WriteByte (BOT_MOVING, BOT_AI_FLEE);
+	WriteEntity (BOT_MOVING, self);
+	WriteCoord (BOT_MOVING, org_x);
+	WriteCoord (BOT_MOVING, org_y);
+	WriteCoord (BOT_MOVING, org_z);
+	WriteCoord (BOT_MOVING, trace_endpos_x);
+	WriteCoord (BOT_MOVING, trace_endpos_y);
+	WriteCoord (BOT_MOVING, trace_endpos_z);
+	multicast (org, TF_FLARE_OFF);
+	LightningDamage (self.origin, (trace_endpos + (v_forward * BOT_MOVING)), self, 30);
+};
+
+float (float tno) num_team_pipebombs =
+{
+	if ((tno == TF_FLARE_OFF))
+	{
+		return (num_team_pipebombs_1);
+	}
+	else
+	{
+		if ((tno == BOT_FIGHTING))
+		{
+			return (num_team_pipebombs_2);
+		}
+		else
+		{
+			if ((tno == BOT_AI_FOLLOW))
+			{
+				return (num_team_pipebombs_3);
+			}
+			else
+			{
+				if ((tno == BOT_MOVING))
+				{
+					return (num_team_pipebombs_4);
+				}
+			}
+		}
+	}
+	return (TF_FLARE_LIT);
+};
+
+void (float tno) ExplodeOldPipebomb =
+{
+	local entity old;
+	local float index;
+
+	if ((tno != TF_FLARE_LIT))
+	{
+		index = num_team_pipebombs (tno);
+		index = (index - (30 / number_of_teams));
+	}
+	else
+	{
+		index = (num_world_pipebombs - 30);
+	}
+	old = find (world, classname, "pipebomb");
+	while ((index > TF_FLARE_LIT))
+	{
+		if ((old == world))
+		{
+			dprint ("*** ERROR: ExplodeOldPipebomb. ***\n");
+			dprint ("*** Please report this.        ***\n");
+			num_world_pipebombs = TF_FLARE_LIT;
+			num_team_pipebombs_1 = TF_FLARE_LIT;
+			num_team_pipebombs_2 = TF_FLARE_LIT;
+			num_team_pipebombs_3 = TF_FLARE_LIT;
+			num_team_pipebombs_4 = TF_FLARE_LIT;
+			return;
+		}
+		if (((old.owner.team_no == tno) || (tno == TF_FLARE_LIT)))
+		{
+			old.nextthink = (time + 0.5);
+			index = (index - TF_FLARE_OFF);
+		}
+		old = find (old, classname, "pipebomb");
+	}
+};
+
+void (float tno) increment_team_pipebombs =
+{
+	if ((tno == TF_FLARE_OFF))
+	{
+		num_team_pipebombs_1 = (num_team_pipebombs_1 + TF_FLARE_OFF);
+	}
+	else
+	{
+		if ((tno == BOT_FIGHTING))
+		{
+			num_team_pipebombs_2 = (num_team_pipebombs_2 + TF_FLARE_OFF);
+		}
+		else
+		{
+			if ((tno == BOT_AI_FOLLOW))
+			{
+				num_team_pipebombs_3 = (num_team_pipebombs_3 + TF_FLARE_OFF);
+			}
+			else
+			{
+				if ((tno == BOT_MOVING))
+				{
+					num_team_pipebombs_4 = (num_team_pipebombs_4 + TF_FLARE_OFF);
+				}
+			}
+		}
+	}
+};
+
+void (float tno) decrement_team_pipebombs =
+{
+	if ((tno == TF_FLARE_OFF))
+	{
+		num_team_pipebombs_1 = (num_team_pipebombs_1 - TF_FLARE_OFF);
+	}
+	else
+	{
+		if ((tno == BOT_FIGHTING))
+		{
+			num_team_pipebombs_2 = (num_team_pipebombs_2 - TF_FLARE_OFF);
+		}
+		else
+		{
+			if ((tno == BOT_AI_FOLLOW))
+			{
+				num_team_pipebombs_3 = (num_team_pipebombs_3 - TF_FLARE_OFF);
+			}
+			else
+			{
+				if ((tno == BOT_MOVING))
+				{
+					num_team_pipebombs_4 = (num_team_pipebombs_4 - TF_FLARE_OFF);
+				}
+			}
+		}
+	}
+};
+
+void () GrenadeExplode =
+{
+	if ((self.classname == "pipebomb"))
+	{
+		num_world_pipebombs = (num_world_pipebombs - TF_FLARE_OFF);
+		decrement_team_pipebombs (self.owner.team_no);
+	}
+	deathmsg = self.weapon;
+	T_RadiusDamage (self, self.owner, 120, world);
+	WriteByte (BOT_MOVING, 23);
+	WriteByte (BOT_MOVING, BOT_AI_FOLLOW);
+	WriteCoord (BOT_MOVING, self.origin_x);
+	WriteCoord (BOT_MOVING, self.origin_y);
+	WriteCoord (BOT_MOVING, self.origin_z);
+	multicast (self.origin, TF_FLARE_OFF);
+	dremove (self);
+};
+
+void () GrenadeTouch =
+{
+	if ((other == self.owner))
+	{
+		return;
+	}
+	if ((other.takedamage == BOT_FIGHTING))
+	{
+		GrenadeExplode ();
+		return;
+	}
+	sound (self, TF_FLARE_OFF, "weapons/bounce.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+	if ((self.velocity == '0 0 0'))
+	{
+		self.avelocity = '0 0 0';
+	}
+};
+
+void () W_FireGrenade =
+{
+	self.ammo_rockets = (self.ammo_rockets - TF_FLARE_OFF);
+	self.currentammo = (self.ammo_rockets - TF_FLARE_OFF);
+	sound (self, TF_FLARE_OFF, "weapons/grenade.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+	KickPlayer (-2, self);
+	newmis = spawn ();
+	newmis.owner = self;
+	newmis.movetype = BOT_AI_SCOUT;
+	newmis.solid = BOT_FIGHTING;
+	if ((self.weaponmode == TF_FLARE_LIT))
+	{
+		newmis.weapon = BOT_AI_GRAPPLE;
+		newmis.classname = "grenade";
+		newmis.skin = TF_FLARE_OFF;
+		newmis.touch = GrenadeTouch;
+		newmis.nextthink = (time + 2.5);
+	}
+	else
+	{
+		if ((self.team_no != TF_FLARE_LIT))
+		{
+			increment_team_pipebombs (self.team_no);
+			if ((num_team_pipebombs (self.team_no) > (30 / number_of_teams)))
+			{
+				ExplodeOldPipebomb (self.team_no);
+			}
+		}
+		else
+		{
+			num_world_pipebombs = (num_world_pipebombs + TF_FLARE_OFF);
+			if ((num_world_pipebombs > 30))
+			{
+				ExplodeOldPipebomb (TF_FLARE_LIT);
+			}
+		}
+		newmis.classname = "pipebomb";
+		newmis.skin = BOT_FIGHTING;
+		newmis.touch = PipebombTouch;
+		newmis.nextthink = (time + 120);
+		newmis.weapon = 11;
+	}
+	makevectors (self.v_angle);
+	if (self.v_angle_x)
+	{
+		newmis.velocity = ((((v_forward * 600) + (v_up * BOT_IMPULSE)) + ((crandom () * v_right) * BOT_AI_SCOUT)) + ((crandom () * v_up) * BOT_AI_SCOUT));
+	}
+	else
+	{
+		newmis.velocity = aim (self, 10000);
+		newmis.velocity = (newmis.velocity * 600);
+		newmis.velocity_z = BOT_IMPULSE;
+	}
+	newmis.avelocity = '300 300 300';
+	newmis.angles = vectoangles (newmis.velocity);
+	newmis.think = GrenadeExplode;
+	setmodel (newmis, "progs/grenade2.mdl");
+	setsize (newmis, '0 0 0', '0 0 0');
+	setorigin (newmis, self.origin);
+};
+void () spike_touch;
+void () superspike_touch;
+
+void (vector org, vector dir) launch_spike =
+{
+	newmis = spawn ();
+	newmis.owner = self;
+	newmis.movetype = BOT_AI_FLAGRUN;
+	newmis.solid = BOT_FIGHTING;
+	newmis.angles = vectoangles (dir);
+	newmis.touch = spike_touch;
+	newmis.weapon = BOT_AI_FOLLOW;
+	newmis.classname = "spike";
+	newmis.think = SUB_Remove;
+	newmis.nextthink = (time + BOT_AI_FLEE);
+	setmodel (newmis, "progs/spike.mdl");
+	setsize (newmis, '0 0 0', '0 0 0');
+	setorigin (newmis, org);
+	newmis.velocity = (dir * 1000);
+};
+
+void () W_FireSuperSpikes =
+{
+	local vector dir;
+	local entity old;
+
+	sound (self, TF_FLARE_OFF, "weapons/spike2.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+	Attack_Finished (0.2);
+	self.ammo_nails = (self.ammo_nails - BOT_FIGHTING);
+	self.currentammo = (self.ammo_nails - BOT_FIGHTING);
+	dir = aim (self, 1000);
+	launch_spike ((self.origin + '0 0 16'), dir);
+	newmis.touch = superspike_touch;
+	newmis.weapon = BOT_MOVING;
+	setmodel (newmis, "progs/s_spike.mdl");
+	setsize (newmis, '0 0 0', '0 0 0');
+	KickPlayer (-2, self);
+};
+
+void (float ox) W_FireSpikes =
+{
+	local vector dir;
+	local entity old;
+
+	makevectors (self.v_angle);
+	if (((self.ammo_nails >= BOT_FIGHTING) && (self.current_weapon == FL_PARTIALGROUND)))
+	{
+		W_FireSuperSpikes ();
+		return;
+	}
+	if ((self.ammo_nails < TF_FLARE_OFF))
+	{
+		self.current_weapon = W_BestWeapon ();
+		W_SetCurrentAmmo ();
+		W_PrintWeaponMessage ();
+		return;
+	}
+	sound (self, TF_FLARE_OFF, "weapons/rocket1i.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+	Attack_Finished (0.2);
+	self.ammo_nails = (self.ammo_nails - TF_FLARE_OFF);
+	self.currentammo = (self.ammo_nails - TF_FLARE_OFF);
+	dir = aim (self, 1000);
+	launch_spike (((self.origin + '0 0 16') + (v_right * ox)), dir);
+	KickPlayer (-2, self);
+};
+.float hit_z;
+
+void () spike_touch =
+{
+	if ((other.solid == TF_FLARE_OFF))
+	{
+		return;
+	}
+	if ((pointcontents (self.origin) == -6))
+	{
+		dremove (self);
+		return;
+	}
+	if (other.takedamage)
+	{
+		spawn_touchblood (BOT_AI_FLAGRUN);
+		deathmsg = self.weapon;
+		if ((self.owner.classname == "grenade"))
+		{
+			TF_T_Damage (other, self, self.owner.owner, BOT_AI_FLAGRUN, BOT_FIGHTING, BOT_FIGHTING);
+		}
+		else
+		{
+			TF_T_Damage (other, self, self.owner, BOT_AI_FLAGRUN, BOT_FIGHTING, BOT_FIGHTING);
+		}
+	}
+	else
+	{
+		WriteByte (BOT_MOVING, 23);
+		if ((self.classname == "wizspike"))
+		{
+			WriteByte (BOT_MOVING, BOT_AI_BLAST);
+		}
+		else
+		{
+			if ((self.classname == "knightspike"))
+			{
+				WriteByte (BOT_MOVING, BOT_DEFEND);
+			}
+			else
+			{
+				WriteByte (BOT_MOVING, TF_FLARE_LIT);
+			}
+		}
+		WriteCoord (BOT_MOVING, self.origin_x);
+		WriteCoord (BOT_MOVING, self.origin_y);
+		WriteCoord (BOT_MOVING, self.origin_z);
+		multicast (self.origin, TF_FLARE_OFF);
+	}
+	dremove (self);
+};
+
+void () superspike_touch =
+{
+	local float ndmg;
+
+	if ((other == self.owner))
+	{
+		return;
+	}
+	if ((other.solid == TF_FLARE_OFF))
+	{
+		return;
+	}
+	if ((pointcontents (self.origin) == -6))
+	{
+		dremove (self);
+		return;
+	}
+	if (other.takedamage)
+	{
+		spawn_touchblood (18);
+		deathmsg = self.weapon;
+		if ((deathmsg == BOT_AI_FLAGRUN))
+		{
+			ndmg = 40;
+		}
+		else
+		{
+			ndmg = 13;
+		}
+		if ((self.owner.classname == "grenade"))
+		{
+			TF_T_Damage (other, self, self.owner.owner, ndmg, BOT_FIGHTING, BOT_FIGHTING);
+		}
+		else
+		{
+			TF_T_Damage (other, self, self.owner, ndmg, BOT_FIGHTING, BOT_FIGHTING);
+		}
+	}
+	else
+	{
+		WriteByte (BOT_MOVING, 23);
+		WriteByte (BOT_MOVING, TF_FLARE_OFF);
+		WriteCoord (BOT_MOVING, self.origin_x);
+		WriteCoord (BOT_MOVING, self.origin_y);
+		WriteCoord (BOT_MOVING, self.origin_z);
+		multicast (self.origin, TF_FLARE_OFF);
+	}
+	dremove (self);
+};
+
+void () W_SetCurrentAmmo =
+{
+	local string st;
+
+	if (((self.health <= TF_FLARE_LIT) || (self.current_weapon == TF_FLARE_LIT)))
+	{
+		return;
+	}
+	player_run ();
+	self.items = (self.items - (self.items & (((FL_ITEM | FL_ONGROUND) | FL_PARTIALGROUND) | FL_WATERJUMP)));
+	self.weapon = TF_FLARE_LIT;
+	if ((self.current_weapon == BOT_RESUPPLYING))
+	{
+		self.currentammo = TF_FLARE_LIT;
+		if ((self.playerclass == BOT_DEFEND))
+		{
+			if ((self.weaponmode == TF_FLARE_LIT))
+			{
+				self.weaponmodel = "progs/v_knife.mdl";
+			}
+			else
+			{
+				self.weaponmodel = "progs/v_knife2.mdl";
+			}
+		}
+		else
+		{
+			self.weaponmodel = "progs/v_axe.mdl";
+		}
+		self.weaponframe = TF_FLARE_LIT;
+	}
+	else
+	{
+		if ((self.current_weapon == TF_FLARE_OFF))
+		{
+			self.currentammo = TF_FLARE_LIT;
+			self.weaponmodel = "progs/v_grap.mdl";
+			self.weaponframe = TF_FLARE_LIT;
+		}
+		else
+		{
+			if ((self.current_weapon == BOT_DEFEND))
+			{
+				self.currentammo = self.ammo_cells;
+				self.weaponmodel = "progs/v_span.mdl";
+				self.weaponframe = TF_FLARE_LIT;
+			}
+			else
+			{
+				if ((self.current_weapon == 128))
+				{
+					self.currentammo = self.ammo_shells;
+					self.items = (self.items | FL_WATERJUMP);
+					if (!(self.tfstate & BOT_FIGHTING))
+					{
+						self.weaponmodel = "progs/v_shot.mdl";
+						self.weaponframe = TF_FLARE_LIT;
+					}
+					self.items = (self.items | FL_ITEM);
+					self.weapon = TF_FLARE_OFF;
+				}
+				else
+				{
+					if ((self.current_weapon == FL_ITEM))
+					{
+						self.currentammo = self.ammo_shells;
+						if (!(self.tfstate & BOT_FIGHTING))
+						{
+							self.weaponmodel = "progs/v_shot2.mdl";
+							self.weaponframe = TF_FLARE_LIT;
+						}
+						self.items = (self.items | FL_ITEM);
+						self.weapon = BOT_FIGHTING;
+					}
+					else
+					{
+						if ((self.current_weapon == FL_ONGROUND))
+						{
+							self.currentammo = self.ammo_nails;
+							if (!(self.tfstate & BOT_FIGHTING))
+							{
+								self.weaponmodel = "progs/v_nail.mdl";
+								self.weaponframe = TF_FLARE_LIT;
+							}
+							self.items = (self.items | FL_ONGROUND);
+							self.weapon = BOT_MOVING;
+						}
+						else
+						{
+							if ((self.current_weapon == FL_PARTIALGROUND))
+							{
+								self.currentammo = self.ammo_nails;
+								if (!(self.tfstate & BOT_FIGHTING))
+								{
+									self.weaponmodel = "progs/v_nail2.mdl";
+									self.weaponframe = TF_FLARE_LIT;
+								}
+								self.items = (self.items | FL_ONGROUND);
+								self.weapon = BOT_DEFEND;
+							}
+							else
+							{
+								if ((self.current_weapon == FL_WATERJUMP))
+								{
+									self.currentammo = self.ammo_rockets;
+									if (!(self.tfstate & BOT_FIGHTING))
+									{
+										self.weaponmodel = "progs/v_rock.mdl";
+										self.weaponframe = TF_FLARE_LIT;
+									}
+									self.weapon = BOT_RESUPPLYING;
+									self.items = (self.items | FL_PARTIALGROUND);
+								}
+								else
+								{
+									if ((self.current_weapon == 8192))
+									{
+										self.currentammo = self.ammo_rockets;
+										if (!(self.tfstate & BOT_FIGHTING))
+										{
+											self.weaponmodel = "progs/v_rock2.mdl";
+											self.weaponframe = TF_FLARE_LIT;
+										}
+										self.items = (self.items | FL_PARTIALGROUND);
+										self.weapon = BOT_AVOIDING_HAZARD;
+									}
+									else
+									{
+										if ((self.current_weapon == 65536))
+										{
+											self.currentammo = self.ammo_cells;
+											if (!(self.tfstate & BOT_FIGHTING))
+											{
+												self.weaponmodel = "progs/v_light.mdl";
+												self.weaponframe = TF_FLARE_LIT;
+											}
+											self.items = (self.items | FL_WATERJUMP);
+											self.weapon = 64;
+										}
+										else
+										{
+											if ((self.current_weapon == BOT_AVOIDING_HAZARD))
+											{
+												self.currentammo = self.ammo_shells;
+												if (!(self.tfstate & BOT_FIGHTING))
+												{
+													self.weaponmodel = "progs/v_srifle.mdl";
+													self.weaponframe = TF_FLARE_LIT;
+												}
+												self.items = (self.items | FL_ITEM);
+												self.weapon = TF_FLARE_OFF;
+											}
+											else
+											{
+												if ((self.current_weapon == 64))
+												{
+													self.currentammo = self.ammo_shells;
+													if (!(self.tfstate & BOT_FIGHTING))
+													{
+														self.weaponmodel = "progs/v_srifle.mdl";
+														self.weaponframe = TF_FLARE_LIT;
+													}
+													self.items = (self.items | FL_ITEM);
+													self.weapon = BOT_FIGHTING;
+												}
+												else
+												{
+													if ((self.current_weapon == 32768))
+													{
+														self.currentammo = self.ammo_shells;
+														if (!(self.tfstate & BOT_FIGHTING))
+														{
+															self.weaponmodel = "progs/v_asscan.mdl";
+															self.weaponframe = TF_FLARE_LIT;
+														}
+														self.items = (self.items | FL_ITEM);
+														self.weapon = BOT_AVOIDING_HAZARD;
+													}
+													else
+													{
+														if ((self.current_weapon == 4096))
+														{
+															self.currentammo = self.ammo_cells;
+															if (!(self.tfstate & BOT_FIGHTING))
+															{
+																self.weaponmodel = "progs/v_rock.mdl";
+																self.weaponframe = TF_FLARE_LIT;
+															}
+															self.items = (self.items | FL_WATERJUMP);
+															self.weapon = BOT_RESUPPLYING;
+														}
+														else
+														{
+															if ((self.current_weapon == 16384))
+															{
+																self.currentammo = self.ammo_rockets;
+																if (!(self.tfstate & BOT_FIGHTING))
+																{
+																	self.weaponmodel = "progs/v_rock2.mdl";
+																	self.weaponframe = TF_FLARE_LIT;
+																}
+																self.items = (self.items | FL_PARTIALGROUND);
+																self.weapon = BOT_AVOIDING_HAZARD;
+															}
+															else
+															{
+																if ((self.current_weapon == BOT_MOVING))
+																{
+																	self.currentammo = TF_FLARE_LIT;
+																	self.weaponmodel = "progs/v_medi.mdl";
+																	self.weaponframe = TF_FLARE_LIT;
+																}
+																else
+																{
+																	if ((self.current_weapon == BOT_FIGHTING))
+																	{
+																		self.currentammo = TF_FLARE_LIT;
+																		self.weaponmodel = "progs/v_bio.mdl";
+																		self.weaponframe = TF_FLARE_LIT;
+																	}
+																	else
+																	{
+																		if ((self.current_weapon == 262144))
+																		{
+																			self.currentammo = self.ammo_shells;
+																			if (!(self.tfstate & BOT_FIGHTING))
+																			{
+																				self.weaponmodel = "progs/v_shot.mdl";
+																				self.weaponframe = TF_FLARE_LIT;
+																			}
+																			self.items = (self.items | FL_ITEM);
+																			self.weapon = TF_FLARE_OFF;
+																		}
+																		else
+																		{
+																			if ((self.current_weapon == IT_INVISIBILITY))
+																			{
+																				self.currentammo = self.ammo_nails;
+																				if (!(self.tfstate & BOT_FIGHTING))
+																				{
+																					self.weaponmodel = "progs/v_rail.mdl";
+																					self.weaponframe = TF_FLARE_LIT;
+																				}
+																				self.items = (self.items | FL_ONGROUND);
+																				self.weapon = TF_FLARE_OFF;
+																			}
+																			else
+																			{
+																				self.currentammo = TF_FLARE_LIT;
+																				self.weaponmodel = "";
+																				self.weaponframe = TF_FLARE_LIT;
+																			}
+																		}
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+};
+
+float () W_BestWeapon =
+{
+	local float it;
+
+	it = self.weapons_carried;
+	if ((((self.ammo_cells >= TF_FLARE_OFF) && (it & 65536)) && (self.waterlevel <= TF_FLARE_OFF)))
+	{
+		return (65536);
+	}
+	else
+	{
+		if ((((self.ammo_cells >= BOT_AI_FLEE) && (self.ammo_shells >= TF_FLARE_OFF)) && (it & 32768)))
+		{
+			return (32768);
+		}
+		else
+		{
+			if (((self.ammo_cells >= TF_FLARE_OFF) && (it & 4096)))
+			{
+				return (4096);
+			}
+			else
+			{
+				if (((self.ammo_nails >= BOT_FIGHTING) && (it & FL_PARTIALGROUND)))
+				{
+					return (FL_PARTIALGROUND);
+				}
+				else
+				{
+					if (((self.ammo_shells >= BOT_FIGHTING) && (it & FL_ITEM)))
+					{
+						return (FL_ITEM);
+					}
+					else
+					{
+						if (((self.ammo_nails >= TF_FLARE_OFF) && (it & IT_INVISIBILITY)))
+						{
+							return (IT_INVISIBILITY);
+						}
+						else
+						{
+							if (((self.ammo_nails >= TF_FLARE_OFF) && (it & FL_ONGROUND)))
+							{
+								return (FL_ONGROUND);
+							}
+							else
+							{
+								if (((self.ammo_shells >= TF_FLARE_OFF) && (it & 128)))
+								{
+									return (128);
+								}
+								else
+								{
+									if (((self.ammo_shells >= TF_FLARE_OFF) && (it & 262144)))
+									{
+										return (262144);
+									}
+									else
+									{
+										if ((it & BOT_MOVING))
+										{
+											return (BOT_MOVING);
+										}
+										else
+										{
+											if ((it & BOT_DEFEND))
+											{
+												return (BOT_DEFEND);
+											}
+											else
+											{
+												if ((it & BOT_RESUPPLYING))
+												{
+													return (BOT_RESUPPLYING);
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	return (TF_FLARE_LIT);
+};
+
+float () W_CheckNoAmmo =
+{
+	if ((self.current_weapon == BOT_MOVING))
+	{
+		return (TF_FLARE_OFF);
+	}
+	else
+	{
+		if ((self.current_weapon == BOT_FIGHTING))
+		{
+			return (TF_FLARE_OFF);
+		}
+		else
+		{
+			if ((((self.current_weapon == BOT_RESUPPLYING) || (self.current_weapon == TF_FLARE_OFF)) || (self.current_weapon == BOT_DEFEND)))
+			{
+				return (TF_FLARE_OFF);
+			}
+			else
+			{
+				if ((self.current_weapon == 16384))
+				{
+					if ((self.currentammo >= BOT_AI_FOLLOW))
+					{
+						return (TF_FLARE_OFF);
+					}
+				}
+				else
+				{
+					if ((self.currentammo > TF_FLARE_LIT))
+					{
+						return (TF_FLARE_OFF);
+					}
+				}
+			}
+		}
+	}
+	self.current_weapon = W_BestWeapon ();
+	W_SetCurrentAmmo ();
+	W_PrintWeaponMessage ();
+	return (TF_FLARE_LIT);
+};
+
+void () W_Reload_shotgun =
+{
+	self.owner.tfstate = (self.owner.tfstate - (self.owner.tfstate & BOT_FIGHTING));
+	self.owner.weaponmodel = "progs/v_shot.mdl";
+	sprint (self.owner, TF_FLARE_LIT, "finished reloading\n");
+	dremove (self);
+	self.owner.StatusRefreshTime = (time + 0.1);
+};
+
+void () W_Reload_super_shotgun =
+{
+	self.owner.tfstate = (self.owner.tfstate - (self.owner.tfstate & BOT_FIGHTING));
+	self.owner.weaponmodel = "progs/v_shot2.mdl";
+	sprint (self.owner, TF_FLARE_LIT, "finished reloading\n");
+	dremove (self);
+	self.owner.StatusRefreshTime = (time + 0.1);
+};
+
+void () W_Reload_grenade_launcher =
+{
+	self.owner.tfstate = (self.owner.tfstate - (self.owner.tfstate & BOT_FIGHTING));
+	self.owner.weaponmodel = "progs/v_rock.mdl";
+	sprint (self.owner, TF_FLARE_LIT, "finished reloading\n");
+	dremove (self);
+	self.owner.StatusRefreshTime = (time + 0.1);
+};
+
+void () W_Reload_rocket_launcher =
+{
+	self.owner.tfstate = (self.owner.tfstate - (self.owner.tfstate & BOT_FIGHTING));
+	self.owner.weaponmodel = "progs/v_rock2.mdl";
+	sprint (self.owner, TF_FLARE_LIT, "finished reloading\n");
+	dremove (self);
+	self.owner.StatusRefreshTime = (time + 0.1);
+};
+
+float () CheckForReload =
+{
+	local entity tWeapon;
+
+	if ((self.current_weapon == 128))
+	{
+		if (((self.reload_shotgun >= BOT_DEFEND) && (self.ammo_shells > TF_FLARE_LIT)))
+		{
+			self.reload_shotgun = TF_FLARE_LIT;
+			if ((self.ammo_shells < BOT_DEFEND))
+			{
+				self.reload_shotgun = (BOT_DEFEND - self.ammo_shells);
+			}
+			sprint (self, BOT_FIGHTING, "reloading...\n");
+			self.tfstate = (self.tfstate | BOT_FIGHTING);
+			tWeapon = spawn ();
+			tWeapon.owner = self;
+			tWeapon.classname = "timer";
+			tWeapon.nextthink = (time + BOT_FIGHTING);
+			tWeapon.think = W_Reload_shotgun;
+			self.weaponmodel = "";
+			self.weaponframe = TF_FLARE_LIT;
+			return (TF_FLARE_OFF);
+		}
+	}
+	else
+	{
+		if ((self.current_weapon == FL_ITEM))
+		{
+			if ((self.reload_super_shotgun > BOT_RESUPPLYING))
+			{
+				self.reload_super_shotgun = BOT_RESUPPLYING;
+			}
+			if (((self.reload_super_shotgun >= BOT_RESUPPLYING) && (self.ammo_shells > TF_FLARE_LIT)))
+			{
+				self.reload_super_shotgun = TF_FLARE_LIT;
+				if ((self.ammo_shells < BOT_RESUPPLYING))
+				{
+					self.reload_super_shotgun = (BOT_RESUPPLYING - self.ammo_shells);
+				}
+				sprint (self, BOT_FIGHTING, "reloading...\n");
+				self.tfstate = (self.tfstate | BOT_FIGHTING);
+				tWeapon = spawn ();
+				tWeapon.owner = self;
+				tWeapon.classname = "timer";
+				tWeapon.nextthink = (time + BOT_AI_FOLLOW);
+				tWeapon.think = W_Reload_super_shotgun;
+				self.weaponmodel = "";
+				self.weaponframe = TF_FLARE_LIT;
+				return (TF_FLARE_OFF);
+			}
+		}
+		else
+		{
+			if ((self.current_weapon == FL_WATERJUMP))
+			{
+				if (((self.reload_grenade_launcher >= BOT_AI_FLEE) && (self.ammo_rockets > TF_FLARE_LIT)))
+				{
+					self.reload_grenade_launcher = TF_FLARE_LIT;
+					if ((self.ammo_rockets < BOT_AI_FLEE))
+					{
+						self.reload_grenade_launcher = (BOT_AI_FLEE - self.ammo_rockets);
+					}
+					sprint (self, BOT_FIGHTING, "reloading...\n");
+					self.tfstate = (self.tfstate | BOT_FIGHTING);
+					tWeapon = spawn ();
+					tWeapon.owner = self;
+					tWeapon.classname = "timer";
+					tWeapon.nextthink = (time + BOT_MOVING);
+					tWeapon.think = W_Reload_grenade_launcher;
+					self.weaponmodel = "";
+					self.weaponframe = TF_FLARE_LIT;
+					return (TF_FLARE_OFF);
+				}
+			}
+			else
+			{
+				if ((self.current_weapon == 8192))
+				{
+					if (((self.reload_rocket_launcher >= BOT_MOVING) && (self.ammo_rockets > TF_FLARE_LIT)))
+					{
+						self.reload_rocket_launcher = TF_FLARE_LIT;
+						if ((self.ammo_rockets < BOT_MOVING))
+						{
+							self.reload_rocket_launcher = (BOT_MOVING - self.ammo_rockets);
+						}
+						sprint (self, BOT_FIGHTING, "reloading...\n");
+						self.tfstate = (self.tfstate | BOT_FIGHTING);
+						tWeapon = spawn ();
+						tWeapon.owner = self;
+						tWeapon.classname = "timer";
+						tWeapon.nextthink = (time + BOT_AI_GRAPPLE);
+						tWeapon.think = W_Reload_rocket_launcher;
+						self.weaponmodel = "";
+						self.weaponframe = TF_FLARE_LIT;
+						return (TF_FLARE_OFF);
+					}
+				}
+			}
+		}
+	}
+	return (TF_FLARE_LIT);
+};
+void () player_axe1;
+void () player_axeb1;
+void () player_axec1;
+void () player_axed1;
+void () player_shot1;
+void () player_nail1;
+void () player_light1;
+void () player_rocket1;
+void () player_autorifle1;
+void () player_assaultcannon1;
+void () player_assaultcannonup1;
+void () player_assaultcannondown1;
+void () player_medikit1;
+void () player_medikitb1;
+void () player_medikitc1;
+void () player_medikitd1;
+void () player_bioweapon1;
+void () player_bioweaponb1;
+void () player_bioweaponc1;
+void () player_bioweapond1;
+void () player_chain1;
+void () player_chain2;
+void () player_chain3;
+void () player_chain4;
+void () player_chain5;
+
+void () W_Attack =
+{
+	local float r;
+	local float tc;
+	local entity tcool;
+	local string st;
+
+	if (!W_CheckNoAmmo ())
+	{
+		return;
+	}
+	if ((self.tfstate & BOT_FIGHTING))
+	{
+		return;
+	}
+	if (self.is_undercover)
+	{
+		Spy_RemoveDisguise (self);
+	}
+	makevectors (self.v_angle);
+	self.show_hostile = (time + TF_FLARE_OFF);
+	if ((self.current_weapon == BOT_RESUPPLYING))
+	{
+		Attack_Finished (0.5);
+		sound (self, TF_FLARE_OFF, "weapons/ax1.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+		r = random ();
+		if ((r < 0.25))
+		{
+			player_axe1 ();
+		}
+		else
+		{
+			if ((r < 0.5))
+			{
+				player_axeb1 ();
+			}
+			else
+			{
+				if ((r < 0.75))
+				{
+					player_axec1 ();
+				}
+				else
+				{
+					player_axed1 ();
+				}
+			}
+		}
+	}
+	else
+	{
+		if ((self.current_weapon == BOT_DEFEND))
+		{
+			Attack_Finished (0.5);
+			sound (self, TF_FLARE_OFF, "weapons/ax1.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+			player_axe1 ();
+		}
+		else
+		{
+			if ((self.current_weapon == TF_FLARE_OFF))
+			{
+				if (!self.hook_out)
+				{
+					player_chain1 ();
+				}
+				Attack_Finished (0.1);
+			}
+			else
+			{
+				if ((self.current_weapon == 128))
+				{
+					if ((CheckForReload () == TF_FLARE_OFF))
+					{
+						return;
+					}
+					player_shot1 ();
+					W_FireShotgun ();
+					self.reload_shotgun = (self.reload_shotgun + TF_FLARE_OFF);
+					self.StatusRefreshTime = (time + 0.1);
+					CheckForReload ();
+					Attack_Finished (0.5);
+				}
+				else
+				{
+					if ((self.current_weapon == FL_ITEM))
+					{
+						if ((CheckForReload () == TF_FLARE_OFF))
+						{
+							return;
+						}
+						player_shot1 ();
+						W_FireSuperShotgun ();
+						self.reload_super_shotgun = (self.reload_super_shotgun + BOT_FIGHTING);
+						self.StatusRefreshTime = (time + 0.1);
+						CheckForReload ();
+						Attack_Finished (0.7);
+					}
+					else
+					{
+						if ((self.current_weapon == FL_ONGROUND))
+						{
+							player_nail1 ();
+						}
+						else
+						{
+							if ((self.current_weapon == FL_PARTIALGROUND))
+							{
+								player_nail1 ();
+							}
+							else
+							{
+								if ((self.current_weapon == FL_WATERJUMP))
+								{
+									if ((CheckForReload () == TF_FLARE_OFF))
+									{
+										return;
+									}
+									player_rocket1 ();
+									W_FireGrenade ();
+									self.reload_grenade_launcher = (self.reload_grenade_launcher + TF_FLARE_OFF);
+									self.StatusRefreshTime = (time + 0.1);
+									CheckForReload ();
+									Attack_Finished (0.6);
+								}
+								else
+								{
+									if ((self.current_weapon == 8192))
+									{
+										if ((CheckForReload () == TF_FLARE_OFF))
+										{
+											return;
+										}
+										player_rocket1 ();
+										W_FireRocket ();
+										self.reload_rocket_launcher = (self.reload_rocket_launcher + TF_FLARE_OFF);
+										self.StatusRefreshTime = (time + 0.1);
+										CheckForReload ();
+										Attack_Finished (0.8);
+									}
+									else
+									{
+										if ((self.current_weapon == 65536))
+										{
+											player_light1 ();
+											Attack_Finished (0.1);
+											sound (self, TF_FLARE_LIT, "weapons/lstart.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	if ((self.current_weapon == BOT_AVOIDING_HAZARD))
+	{
+		if (((self.flags & FL_ONGROUND) || self.hook_out))
+		{
+			player_shot1 ();
+			W_FireSniperRifle ();
+			Attack_Finished (1.5);
+		}
+	}
+	else
+	{
+		if ((self.current_weapon == 64))
+		{
+			player_autorifle1 ();
+			W_FireAutoRifle ();
+			Attack_Finished (0.1);
+		}
+		else
+		{
+			if ((self.current_weapon == 32768))
+			{
+				if ((self.ammo_cells < BOT_MOVING))
+				{
+					sprint (self, TF_FLARE_OFF, "Insufficient cells to power up the Assault Cannon.\n");
+				}
+				else
+				{
+					self.ammo_cells = (self.ammo_cells - BOT_MOVING);
+					self.heat = TF_FLARE_OFF;
+					self.immune_to_check = (time + BOT_FIGHTING);
+					self.tfstate = (self.tfstate | 65536);
+					TeamFortress_SetSpeed (self);
+					player_assaultcannonup1 ();
+				}
+			}
+			else
+			{
+				if ((self.current_weapon == 4096))
+				{
+					player_shot1 ();
+					W_FireFlame ();
+					if ((self.waterlevel > BOT_FIGHTING))
+					{
+						Attack_Finished (TF_FLARE_OFF);
+					}
+					else
+					{
+						Attack_Finished (0.15);
+					}
+				}
+				else
+				{
+					if ((self.current_weapon == 16384))
+					{
+						player_rocket1 ();
+						W_FireIncendiaryCannon ();
+						Attack_Finished (1.2);
+					}
+					else
+					{
+						if ((self.current_weapon == BOT_MOVING))
+						{
+							sound (self, TF_FLARE_OFF, "weapons/ax1.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+							r = random ();
+							if ((r < 0.25))
+							{
+								player_medikit1 ();
+							}
+							else
+							{
+								if ((r < 0.5))
+								{
+									player_medikitb1 ();
+								}
+								else
+								{
+									if ((r < 0.75))
+									{
+										player_medikitc1 ();
+									}
+									else
+									{
+										player_medikitd1 ();
+									}
+								}
+							}
+							Attack_Finished (0.5);
+						}
+						else
+						{
+							if ((self.current_weapon == BOT_FIGHTING))
+							{
+								sound (self, TF_FLARE_OFF, "weapons/ax1.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+								r = random ();
+								if ((r < 0.25))
+								{
+									player_bioweapon1 ();
+								}
+								else
+								{
+									if ((r < 0.5))
+									{
+										player_bioweaponb1 ();
+									}
+									else
+									{
+										if ((r < 0.75))
+										{
+											player_bioweaponc1 ();
+										}
+										else
+										{
+											player_bioweapond1 ();
+										}
+									}
+								}
+								Attack_Finished (0.5);
+							}
+							else
+							{
+								if ((self.current_weapon == 262144))
+								{
+									sound (self, TF_FLARE_OFF, "weapons/dartgun.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+									player_shot1 ();
+									W_FireTranq ();
+									Attack_Finished (1.5);
+								}
+								else
+								{
+									if ((self.current_weapon == IT_INVISIBILITY))
+									{
+										sound (self, TF_FLARE_OFF, "weapons/railgun.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+										player_shot1 ();
+										W_FireLaser ();
+										Attack_Finished (0.4);
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+};
+
+void () W_PrintWeaponMessage =
+{
+	if (((self.current_weapon == BOT_RESUPPLYING) && allow_hook))
+	{
+		if ((self.playerclass != BOT_DEFEND))
+		{
+			sprint (self, TF_FLARE_OFF, "Axe selected\n");
+		}
+	}
+	else
+	{
+		if ((self.current_weapon == TF_FLARE_OFF))
+		{
+			sprint (self, TF_FLARE_OFF, "grappling hook selected\n");
+		}
+		else
+		{
+			if ((self.current_weapon == FL_WATERJUMP))
+			{
+				if ((self.weaponmode == TF_FLARE_LIT))
+				{
+					sprint (self, TF_FLARE_OFF, "Normal grenade mode\n");
+				}
+				else
+				{
+					if ((self.weaponmode == TF_FLARE_OFF))
+					{
+						sprint (self, TF_FLARE_OFF, "Pipebomb mode\n");
+					}
+				}
+			}
+			else
+			{
+				if ((self.current_weapon == BOT_AVOIDING_HAZARD))
+				{
+					sprint (self, TF_FLARE_OFF, "Sniper rifle ready\n");
+				}
+				else
+				{
+					if ((self.current_weapon == 64))
+					{
+						sprint (self, TF_FLARE_OFF, "rifle on fully auto\n");
+					}
+					else
+					{
+						if ((self.current_weapon == 262144))
+						{
+							sprint (self, TF_FLARE_OFF, "Tranquiliser gun selected\n");
+						}
+						else
+						{
+							if ((self.current_weapon == BOT_FIGHTING))
+							{
+								sprint (self, TF_FLARE_OFF, "BioWeapon readied\n");
+							}
+							else
+							{
+								if ((self.current_weapon == BOT_MOVING))
+								{
+									sprint (self, TF_FLARE_OFF, "Medikit readied\n");
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+};
+
+void () W_ChangeWeapon =
+{
+	local float it;
+	local float am;
+	local float fl;
+	local float have_weapon;
+	local float usable;
+
+	if ((self.tfstate & BOT_FIGHTING))
+	{
+		return;
+	}
+	it = self.weapons_carried;
+	fl = self.current_weapon;
+	am = TF_FLARE_LIT;
+	usable = TF_FLARE_LIT;
+	have_weapon = TF_FLARE_OFF;
+	if ((self.impulse == TF_FLARE_OFF))
+	{
+		if (!(it & ((((TF_FLARE_OFF | BOT_FIGHTING) | BOT_MOVING) | BOT_RESUPPLYING) | BOT_DEFEND)))
+		{
+			have_weapon = TF_FLARE_LIT;
+		}
+		while ((!usable && have_weapon))
+		{
+			if ((fl == BOT_DEFEND))
+			{
+				fl = BOT_FIGHTING;
+				if ((it & BOT_FIGHTING))
+				{
+					usable = TF_FLARE_OFF;
+				}
+			}
+			else
+			{
+				if ((fl == BOT_FIGHTING))
+				{
+					fl = BOT_MOVING;
+					if ((it & BOT_MOVING))
+					{
+						usable = TF_FLARE_OFF;
+					}
+				}
+				else
+				{
+					if ((fl == BOT_MOVING))
+					{
+						fl = TF_FLARE_OFF;
+						if ((allow_hook && (fl & TF_FLARE_OFF)))
+						{
+							usable = TF_FLARE_OFF;
+						}
+						if (self.hook_out)
+						{
+							Reset_Grapple (self.hook);
+						}
+					}
+					else
+					{
+						if ((fl == TF_FLARE_OFF))
+						{
+							fl = BOT_RESUPPLYING;
+							if ((it & BOT_RESUPPLYING))
+							{
+								usable = TF_FLARE_OFF;
+							}
+						}
+						else
+						{
+							fl = BOT_DEFEND;
+							if ((it & BOT_DEFEND))
+							{
+								usable = TF_FLARE_OFF;
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	else
+	{
+		if ((allow_hook && ((self.impulse == 22) || (self.impulse == 39))))
+		{
+			fl = TF_FLARE_OFF;
+		}
+		else
+		{
+			if ((self.impulse == 40))
+			{
+				if (!(it & (((BOT_FIGHTING | BOT_MOVING) | BOT_RESUPPLYING) | BOT_DEFEND)))
+				{
+					have_weapon = TF_FLARE_LIT;
+				}
+				while ((!usable && have_weapon))
+				{
+					if ((fl == BOT_DEFEND))
+					{
+						fl = BOT_FIGHTING;
+						if ((it & BOT_FIGHTING))
+						{
+							usable = TF_FLARE_OFF;
+						}
+					}
+					else
+					{
+						if ((fl == BOT_FIGHTING))
+						{
+							fl = BOT_RESUPPLYING;
+							if ((it & BOT_RESUPPLYING))
+							{
+								usable = TF_FLARE_OFF;
+							}
+						}
+						else
+						{
+							fl = BOT_DEFEND;
+							if ((it & BOT_DEFEND))
+							{
+								usable = TF_FLARE_OFF;
+							}
+						}
+					}
+				}
+			}
+			else
+			{
+				if ((self.impulse == BOT_FIGHTING))
+				{
+					if ((it & BOT_AVOIDING_HAZARD))
+					{
+						fl = BOT_AVOIDING_HAZARD;
+						if ((self.ammo_shells < TF_FLARE_OFF))
+						{
+							am = TF_FLARE_OFF;
+						}
+					}
+					else
+					{
+						if ((it & 128))
+						{
+							fl = 128;
+							if ((self.ammo_shells < TF_FLARE_OFF))
+							{
+								am = TF_FLARE_OFF;
+							}
+						}
+						else
+						{
+							if ((it & 262144))
+							{
+								fl = 262144;
+								if ((self.ammo_shells < TF_FLARE_OFF))
+								{
+									am = TF_FLARE_OFF;
+								}
+							}
+							else
+							{
+								if ((it & IT_INVISIBILITY))
+								{
+									fl = IT_INVISIBILITY;
+									if ((self.ammo_nails < TF_FLARE_OFF))
+									{
+										am = TF_FLARE_OFF;
+									}
+								}
+								else
+								{
+									have_weapon = TF_FLARE_LIT;
+								}
+							}
+						}
+					}
+				}
+				else
+				{
+					if ((self.impulse == BOT_AI_FOLLOW))
+					{
+						if ((it & 64))
+						{
+							fl = 64;
+							if ((self.ammo_shells < TF_FLARE_OFF))
+							{
+								am = TF_FLARE_OFF;
+							}
+						}
+						else
+						{
+							fl = FL_ITEM;
+							if ((self.ammo_shells < BOT_FIGHTING))
+							{
+								am = TF_FLARE_OFF;
+							}
+						}
+					}
+					else
+					{
+						if ((self.impulse == BOT_MOVING))
+						{
+							fl = FL_ONGROUND;
+							if ((self.ammo_nails < TF_FLARE_OFF))
+							{
+								am = TF_FLARE_OFF;
+							}
+						}
+						else
+						{
+							if ((self.impulse == BOT_AI_GRAPPLE))
+							{
+								fl = FL_PARTIALGROUND;
+								if ((self.ammo_nails < BOT_FIGHTING))
+								{
+									am = TF_FLARE_OFF;
+								}
+							}
+							else
+							{
+								if ((self.impulse == BOT_AI_FLEE))
+								{
+									if ((it & 4096))
+									{
+										fl = 4096;
+										if ((self.ammo_cells < TF_FLARE_OFF))
+										{
+											am = TF_FLARE_OFF;
+										}
+									}
+									else
+									{
+										if ((it & FL_WATERJUMP))
+										{
+											fl = FL_WATERJUMP;
+											if ((self.ammo_rockets < TF_FLARE_OFF))
+											{
+												am = TF_FLARE_OFF;
+											}
+											self.weaponmode = TF_FLARE_LIT;
+										}
+										else
+										{
+											have_weapon = TF_FLARE_LIT;
+										}
+									}
+								}
+								else
+								{
+									if ((self.impulse == BOT_AI_BLAST))
+									{
+										if ((it & 16384))
+										{
+											fl = 16384;
+											if ((self.ammo_rockets < BOT_AI_FOLLOW))
+											{
+												am = TF_FLARE_OFF;
+											}
+										}
+										else
+										{
+											if ((it & 8192))
+											{
+												fl = 8192;
+												if ((self.ammo_rockets < TF_FLARE_OFF))
+												{
+													am = TF_FLARE_OFF;
+												}
+											}
+											else
+											{
+												if ((it & 32768))
+												{
+													fl = 32768;
+													if ((self.ammo_shells < TF_FLARE_OFF))
+													{
+														am = TF_FLARE_OFF;
+													}
+													else
+													{
+														if ((self.ammo_cells < BOT_MOVING))
+														{
+															am = BOT_FIGHTING;
+														}
+													}
+												}
+												else
+												{
+													if ((it & FL_WATERJUMP))
+													{
+														fl = FL_WATERJUMP;
+														self.weaponmode = TF_FLARE_OFF;
+														if ((self.ammo_rockets < TF_FLARE_OFF))
+														{
+															am = TF_FLARE_OFF;
+														}
+													}
+													else
+													{
+														have_weapon = TF_FLARE_LIT;
+													}
+												}
+											}
+										}
+									}
+									else
+									{
+										if ((self.impulse == BOT_DEFEND))
+										{
+											fl = 65536;
+											if ((self.ammo_cells < TF_FLARE_OFF))
+											{
+												am = TF_FLARE_OFF;
+											}
+										}
+										else
+										{
+											if ((self.impulse == 176))
+											{
+												fl = BOT_MOVING;
+												if ((it & BOT_MOVING))
+												{
+													usable = TF_FLARE_OFF;
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	self.impulse = TF_FLARE_LIT;
+	if ((!have_weapon || !(it & fl)))
+	{
+		sprint (self, BOT_FIGHTING, "no weapon.\n");
+		return;
+	}
+	if ((am == TF_FLARE_OFF))
+	{
+		sprint (self, BOT_FIGHTING, "not enough ammo.\n");
+		return;
+	}
+	if ((am == BOT_FIGHTING))
+	{
+		sprint (self, BOT_FIGHTING, "not enough cells to power assault cannon.\n");
+		return;
+	}
+	self.current_weapon = fl;
+	W_SetCurrentAmmo ();
+	W_PrintWeaponMessage ();
+	self.StatusRefreshTime = (time + 0.1);
+};
+
+void () CycleWeaponCommand =
+{
+	local float it;
+	local float am;
+	local float cont;
+	local float loopcount;
+
+	if (((self.weaponmodel == string_null) || (self.current_weapon == TF_FLARE_LIT)))
+	{
+		return;
+	}
+	if ((self.tfstate & BOT_FIGHTING))
+	{
+		return;
+	}
+	it = self.weapons_carried;
+	self.impulse = TF_FLARE_LIT;
+	loopcount = TF_FLARE_LIT;
+	while (TF_FLARE_OFF)
+	{
+		am = TF_FLARE_LIT;
+		cont = TF_FLARE_LIT;
+		if ((self.current_weapon == BOT_RESUPPLYING))
+		{
+			self.current_weapon = BOT_DEFEND;
+		}
+		else
+		{
+			if ((self.current_weapon == BOT_DEFEND))
+			{
+				self.current_weapon = 128;
+				if ((self.ammo_shells < TF_FLARE_OFF))
+				{
+					am = TF_FLARE_OFF;
+				}
+			}
+			else
+			{
+				if ((self.current_weapon == 128))
+				{
+					self.current_weapon = IT_INVISIBILITY;
+					if ((self.ammo_nails < TF_FLARE_OFF))
+					{
+						am = TF_FLARE_OFF;
+					}
+				}
+				else
+				{
+					if ((self.current_weapon == IT_INVISIBILITY))
+					{
+						self.current_weapon = 262144;
+						if ((self.ammo_shells < TF_FLARE_OFF))
+						{
+							am = TF_FLARE_OFF;
+						}
+					}
+					else
+					{
+						if ((self.current_weapon == 262144))
+						{
+							self.current_weapon = BOT_AVOIDING_HAZARD;
+							if ((self.ammo_shells < TF_FLARE_OFF))
+							{
+								am = TF_FLARE_OFF;
+							}
+						}
+						else
+						{
+							if ((self.current_weapon == BOT_AVOIDING_HAZARD))
+							{
+								self.current_weapon = 64;
+								if ((self.ammo_shells < TF_FLARE_OFF))
+								{
+									am = TF_FLARE_OFF;
+								}
+							}
+							else
+							{
+								if ((self.current_weapon == 64))
+								{
+									self.current_weapon = FL_ITEM;
+									if ((self.ammo_shells < BOT_FIGHTING))
+									{
+										am = TF_FLARE_OFF;
+									}
+								}
+								else
+								{
+									if ((self.current_weapon == FL_ITEM))
+									{
+										self.current_weapon = FL_ONGROUND;
+										if ((self.ammo_nails < TF_FLARE_OFF))
+										{
+											am = TF_FLARE_OFF;
+										}
+									}
+									else
+									{
+										if ((self.current_weapon == FL_ONGROUND))
+										{
+											self.current_weapon = FL_PARTIALGROUND;
+											if ((self.ammo_nails < BOT_FIGHTING))
+											{
+												am = TF_FLARE_OFF;
+											}
+										}
+										else
+										{
+											if ((self.current_weapon == FL_PARTIALGROUND))
+											{
+												self.current_weapon = FL_WATERJUMP;
+												self.weaponmode = TF_FLARE_LIT;
+												if ((self.ammo_rockets < TF_FLARE_OFF))
+												{
+													am = TF_FLARE_OFF;
+												}
+											}
+											else
+											{
+												if (((self.current_weapon == FL_WATERJUMP) && (self.weaponmode == TF_FLARE_LIT)))
+												{
+													self.current_weapon = FL_WATERJUMP;
+													self.weaponmode = TF_FLARE_OFF;
+													if ((self.ammo_rockets < TF_FLARE_OFF))
+													{
+														am = TF_FLARE_OFF;
+													}
+												}
+												else
+												{
+													if (((self.current_weapon == FL_WATERJUMP) && (self.weaponmode == TF_FLARE_OFF)))
+													{
+														self.current_weapon = 8192;
+														if ((self.ammo_rockets < TF_FLARE_OFF))
+														{
+															am = TF_FLARE_OFF;
+														}
+													}
+													else
+													{
+														if ((self.current_weapon == 8192))
+														{
+															self.current_weapon = 65536;
+															if ((self.ammo_cells < TF_FLARE_OFF))
+															{
+																am = TF_FLARE_OFF;
+															}
+														}
+														else
+														{
+															if ((self.current_weapon == 65536))
+															{
+																self.current_weapon = 4096;
+																if ((self.ammo_cells < TF_FLARE_OFF))
+																{
+																	am = TF_FLARE_OFF;
+																}
+															}
+															else
+															{
+																if ((self.current_weapon == 4096))
+																{
+																	self.current_weapon = 16384;
+																	if ((self.ammo_rockets < BOT_AI_FOLLOW))
+																	{
+																		am = TF_FLARE_OFF;
+																	}
+																}
+																else
+																{
+																	if ((self.current_weapon == 16384))
+																	{
+																		self.current_weapon = 32768;
+																		if ((self.ammo_cells < BOT_AI_FLEE))
+																		{
+																			am = TF_FLARE_OFF;
+																		}
+																		if ((self.ammo_shells < TF_FLARE_OFF))
+																		{
+																			am = TF_FLARE_OFF;
+																		}
+																	}
+																	else
+																	{
+																		if ((self.current_weapon == 32768))
+																		{
+																			self.current_weapon = TF_FLARE_OFF;
+																			if (!allow_hook)
+																			{
+																				am = TF_FLARE_OFF;
+																			}
+																		}
+																		else
+																		{
+																			if ((self.current_weapon == TF_FLARE_OFF))
+																			{
+																				self.current_weapon = BOT_FIGHTING;
+																			}
+																			else
+																			{
+																				if ((self.current_weapon == BOT_FIGHTING))
+																				{
+																					self.current_weapon = BOT_MOVING;
+																				}
+																				else
+																				{
+																					if ((self.current_weapon == BOT_MOVING))
+																					{
+																						self.current_weapon = BOT_RESUPPLYING;
+																					}
+																				}
+																			}
+																		}
+																	}
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+		if ((loopcount > 30))
+		{
+			return;
+		}
+		loopcount = (loopcount + TF_FLARE_OFF);
+		if (((self.weapons_carried & self.current_weapon) && (am == TF_FLARE_LIT)))
+		{
+			if ((self.current_weapon != FL_WATERJUMP))
+			{
+				self.weaponmode = TF_FLARE_LIT;
+			}
+			W_SetCurrentAmmo ();
+			W_PrintWeaponMessage ();
+			self.StatusRefreshTime = (time + 0.1);
+			return;
+		}
+	}
+};
+void () DeadImpulses;
+
+void () ImpulseCommands =
+{
+	local entity te;
+
+	if (((self.last_impulse == 168) && self.impulse))
+	{
+		TeamFortress_SetDetpack (self.impulse);
+	}
+	else
+	{
+		if (((self.last_impulse == 159) && self.impulse))
+		{
+			TeamFortress_Scan (self.impulse);
+		}
+	}
+	if (((self.impulse == BOT_DEFEND) && (self.current_menu != BOT_AI_FLEE)))
+	{
+		self.current_menu = BOT_AI_FLEE;
+		self.menu_count = 25;
+		self.menu_displaytime = TF_FLARE_LIT;
+	}
+	if ((self.impulse == 171))
+	{
+		UseSpecialSkill ();
+	}
+	if (((!self.is_building && !self.is_detpacking) && !self.is_feigning))
+	{
+		if ((((self.impulse >= TF_FLARE_OFF) && (self.impulse < BOT_DEFEND)) || (self.impulse == 176)))
+		{
+			W_ChangeWeapon ();
+		}
+		else
+		{
+			if ((allow_hook && ((self.impulse == 22) || (self.impulse == 39))))
+			{
+				W_ChangeWeapon ();
+			}
+			else
+			{
+				if ((self.impulse == 40))
+				{
+					W_ChangeWeapon ();
+				}
+				else
+				{
+					if (((self.impulse == BOT_AI_SCOUT) || (self.impulse == 12)))
+					{
+						CycleWeaponCommand ();
+					}
+					else
+					{
+						if ((self.impulse == 150))
+						{
+							TeamFortress_PrimeGrenade ();
+						}
+						else
+						{
+							if ((self.impulse == 151))
+							{
+								TeamFortress_PrimeGrenade ();
+							}
+							else
+							{
+								if ((self.impulse == 173))
+								{
+									TeamFortress_ReloadCurrentWeapon ();
+								}
+								else
+								{
+									if ((self.impulse == 162))
+									{
+										TeamFortress_Scan (BOT_AI_SCOUT);
+									}
+									else
+									{
+										if ((self.impulse == 163))
+										{
+											TeamFortress_Scan (30);
+										}
+										else
+										{
+											if ((self.impulse == 164))
+											{
+												TeamFortress_Scan (100);
+											}
+											else
+											{
+												if ((self.impulse == 165))
+												{
+													TeamFortress_SetDetpack (BOT_AI_GRAPPLE);
+												}
+												else
+												{
+													if ((self.impulse == 166))
+													{
+														TeamFortress_SetDetpack (20);
+													}
+													else
+													{
+														if ((self.impulse == 167))
+														{
+															TeamFortress_SetDetpack (50);
+														}
+														else
+														{
+															if ((self.impulse == 172))
+															{
+																self.current_menu = BOT_MOVING;
+																self.menu_count = (25 - BOT_AI_GRAPPLE);
+															}
+															else
+															{
+																if ((self.impulse == 184))
+																{
+																	TeamFortress_Discard ();
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	if ((self.impulse == 135))
+	{
+		TeamFortress_Inventory ();
+	}
+	else
+	{
+		if ((self.impulse == 181))
+		{
+			TeamFortress_SaveMe ();
+		}
+		else
+		{
+			if ((self.impulse == 152))
+			{
+				TeamFortress_ThrowGrenade ();
+			}
+			else
+			{
+				if ((self.impulse == 185))
+				{
+					TeamFortress_ID ();
+				}
+				else
+				{
+					if ((self.impulse == 170))
+					{
+						TeamFortress_DetonatePipebombs ();
+					}
+					else
+					{
+						if ((self.impulse == 169))
+						{
+							TeamFortress_DetpackStop ();
+						}
+						else
+						{
+							if (((self.impulse == 177) && (self.playerclass == BOT_DEFEND)))
+							{
+								TeamFortress_SpyGoUndercover ();
+							}
+							else
+							{
+								if (((self.impulse == 178) && (self.playerclass == BOT_DEFEND)))
+								{
+									TeamFortress_SpyFeignDeath ();
+								}
+								else
+								{
+									if (((self.impulse == 179) && (self.playerclass == BOT_AI_FLAGRUN)))
+									{
+										TeamFortress_EngineerBuild ();
+									}
+									else
+									{
+										if ((self.impulse == 23))
+										{
+											if ((CTF_Map == TF_FLARE_OFF))
+											{
+												TeamFortress_CTF_FlagInfo ();
+											}
+											else
+											{
+												TeamFortress_DisplayDetectionItems ();
+											}
+										}
+										else
+										{
+											if ((self.impulse == 118))
+											{
+												display_location ();
+											}
+											else
+											{
+												DeadImpulses ();
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+	if ((self.impulse == 168))
+	{
+		self.last_impulse = self.impulse;
+	}
+	if ((self.impulse == 159))
+	{
+		self.last_impulse = self.impulse;
+	}
+	self.impulse = TF_FLARE_LIT;
+};
+
+void () DeadImpulses =
+{
+	if ((self.impulse == 136))
+	{
+		TeamFortress_ShowTF ();
+	}
+	else
+	{
+		if ((self.impulse == 174))
+		{
+			TeamFortress_AutoZoomToggle ();
+		}
+		else
+		{
+			if ((self.impulse == 137))
+			{
+				TeamFortress_DisplayLegalClasses ();
+			}
+			else
+			{
+				if (((self.impulse >= 100) && (self.impulse <= (100 + BOT_AI_SCOUT))))
+				{
+					TeamFortress_ChangeClass ();
+				}
+				else
+				{
+					if ((self.impulse == 131))
+					{
+						TeamFortress_HelpMap ();
+					}
+					else
+					{
+						if ((self.impulse == 119))
+						{
+							TeamFortress_StatusQuery ();
+						}
+						else
+						{
+							if ((self.impulse == 140))
+							{
+								TeamFortress_TeamSet (TF_FLARE_OFF);
+							}
+							else
+							{
+								if ((self.impulse == 141))
+								{
+									TeamFortress_TeamSet (BOT_FIGHTING);
+								}
+								else
+								{
+									if ((self.impulse == 142))
+									{
+										TeamFortress_TeamSet (BOT_AI_FOLLOW);
+									}
+									else
+									{
+										if ((self.impulse == 143))
+										{
+											TeamFortress_TeamSet (BOT_MOVING);
+										}
+										else
+										{
+											if ((self.impulse == 145))
+											{
+												TeamFortress_TeamShowScores (TF_FLARE_LIT);
+											}
+											else
+											{
+												if ((self.impulse == 144))
+												{
+													TeamFortress_TeamShowMemberClasses (self);
+												}
+												else
+												{
+													if ((self.impulse == 182))
+													{
+														self.StatusRefreshTime = (time + 0.2);
+														self.StatusBarSize = (self.StatusBarSize + TF_FLARE_OFF);
+														if ((self.StatusBarSize > BOT_FIGHTING))
+														{
+															self.StatusBarSize = TF_FLARE_OFF;
+														}
+													}
+													else
+													{
+														if ((self.impulse == 183))
+														{
+															self.StatusRefreshTime = (time + 60);
+															self.StatusBarSize = TF_FLARE_LIT;
+														}
+														else
+														{
+															if (((self.impulse >= 71) && (self.impulse <= 81)))
+															{
+																StatusRes ((self.impulse - 71));
+															}
+															else
+															{
+																if ((self.impulse == 13))
+																{
+																	sprint (self, BOT_FIGHTING, "Aliases checked.\n");
+																	self.got_aliases = TF_FLARE_OFF;
+																	self.impulse = TF_FLARE_LIT;
+																}
+															}
+														}
+													}
+												}
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+};
+
+void () W_WeaponFrame =
+{
+	local vector tv;
+
+	if (!(self.tfstate & FL_WATERJUMP))
+	{
+		if (((self.height > 29) && (self.height < 90)))
+		{
+			self.height = (self.height + BOT_DEFEND);
+			if ((self.height > 90))
+			{
+				self.height = 90;
+			}
+			TF_zoom (self.height);
+		}
+	}
+	if ((self.current_menu > TF_FLARE_LIT))
+	{
+		Player_Menu ();
+		if (((self.impulse > TF_FLARE_LIT) && (self.impulse < 11)))
+		{
+			Menu_Input (self.impulse);
+			if ((self.impulse != TF_FLARE_LIT))
+			{
+				if ((((self.team_no == TF_FLARE_LIT) && teamplay) && (self.lives != TF_FLARE_LIT)))
+				{
+					Menu_Team_Input (self.impulse);
+				}
+				else
+				{
+					if (((self.playerclass == TF_FLARE_LIT) && (self.lives != TF_FLARE_LIT)))
+					{
+						Menu_Class_Input (self.impulse);
+					}
+				}
+			}
+		}
+	}
+	if ((time < self.attack_finished))
+	{
+		return;
+	}
+	if ((self.impulse != TF_FLARE_LIT))
+	{
+		ImpulseCommands ();
+	}
+	if ((((self.is_building != TF_FLARE_LIT) || (self.is_detpacking != TF_FLARE_LIT)) || (self.is_feigning != TF_FLARE_LIT)))
+	{
+		return;
+	}
+	if (((!self.button0 && self.fire_held_down) && (self.current_weapon == 32768)))
+	{
+		self.fire_held_down = TF_FLARE_LIT;
+		self.tfstate = (self.tfstate - (self.tfstate & 65536));
+		TeamFortress_SetSpeed (self);
+		player_run ();
+	}
+	if ((self.button0 && !self.fire_held_down))
+	{
+		if (((self.current_menu == BOT_AI_FLEE) || (self.current_menu == BOT_AI_BLAST)))
+		{
+			self.current_menu = BOT_DEFEND;
+			self.menu_count = 25;
+			Attack_Finished (0.2);
+		}
+		else
+		{
+			if ((self.current_weapon == BOT_AVOIDING_HAZARD))
+			{
+				if ((self.tfstate & FL_WATERJUMP))
+				{
+					if ((self.heat < 400))
+					{
+						self.heat = (self.heat + BOT_AI_FOLLOW);
+					}
+					if ((self.height > 30))
+					{
+						self.height = (self.height - BOT_AI_GRAPPLE);
+						TF_zoom (self.height);
+					}
+				}
+				else
+				{
+					tv = self.velocity;
+					tv_z = TF_FLARE_LIT;
+					if ((vlen (tv) <= 50))
+					{
+						SniperSight_Create ();
+						self.heat = 50;
+						self.height = 90;
+						self.tfstate = (self.tfstate | FL_WATERJUMP);
+						TeamFortress_SetSpeed (self);
+					}
+				}
+			}
+			else
+			{
+				if ((self.current_weapon == 32768))
+				{
+					if ((self.flags & FL_ONGROUND))
+					{
+						SuperDamageSound ();
+						W_Attack ();
+					}
+					else
+					{
+						sprint (self, TF_FLARE_OFF, "You cannot fire the assault cannon without\nyour feet on the ground...\n");
+					}
+				}
+				else
+				{
+					SuperDamageSound ();
+					W_Attack ();
+				}
+			}
+		}
+	}
+	else
+	{
+		if ((self.playerclass == TF_FLARE_LIT))
+		{
+			self.weaponmode = TF_FLARE_LIT;
+		}
+		else
+		{
+			if ((self.tfstate & FL_WATERJUMP))
+			{
+				W_Attack ();
+				self.tfstate = (self.tfstate - FL_WATERJUMP);
+				TeamFortress_SetSpeed (self);
+				self.heat = TF_FLARE_LIT;
+			}
+		}
+	}
+};
+
+void () SuperDamageSound =
+{
+	if ((self.super_damage_finished > time))
+	{
+		if ((self.super_sound < time))
+		{
+			self.super_sound = (time + TF_FLARE_OFF);
+			sound (self, BOT_MOVING, "items/damage3.wav", TF_FLARE_OFF, TF_FLARE_OFF);
+		}
+	}
+	return;
+};
